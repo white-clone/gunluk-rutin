@@ -9,7 +9,7 @@
       Authentication → Sign In / Providers → Confirm email. Şu an kapalı.
 
 ## Aşama 2
-- [ ] Arkadaş kodu ile arkadaş ekleme ve onay.
+- [x] Arkadaş kodu ile arkadaş ekleme ve onay, lakap takma (supabase/2-arkadaslar.sql).
 - [ ] Görev başına "arkadaşlarım dürtebilir" ayarı, dürtme bildirimi (Web Push + Edge Function).
 - [ ] Sabah / akşam hatırlatması (pg_cron).
 - [ ] Telefona yüklenebilir uygulama (PWA: manifest + service worker).
@@ -17,4 +17,4 @@
 ## Proje bilgileri
 - Supabase projesi: gunluk-rutin (Frankfurt) — https://foxacfsypoceaiqlrcwv.supabase.co
 - Site: https://white-clone.github.io/gunluk-rutin/
-- Veritabanı kurulumu: supabase/kurulum.sql
+- Veritabanı kurulumu: supabase/kurulum.sql, ardından supabase/2-arkadaslar.sql (ikisi de çalıştırıldı)

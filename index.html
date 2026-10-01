@@ -24,12 +24,27 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .avatar{font:600 13px/1 var(--font-sans);color:var(--accent);background:var(--accent-soft);border-color:transparent}
 
 /* sekmeler */
-.tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:var(--radius-pill);padding:4px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--surface-2);border-radius:var(--radius-pill);padding:4px}
 .tab{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;font-weight:600;color:var(--ink-muted);display:flex;justify-content:center;gap:6px}
 .tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 .cnt{font:500 13px/22px var(--font-mono);color:var(--ink-muted)}
 
 .btn.snooze{background:var(--timer);color:var(--on-timer)}
+.btn.sm{padding:8px 12px;font-size:14px}
+
+/* arkadaşlar */
+.frow{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);padding:var(--space-2);border-radius:var(--radius-md);width:100%}
+.fbtn{border:0;background:none;text-align:left}
+.fbtn:hover{background:var(--surface)}
+.av{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-content:center;font:600 13px/1 var(--font-sans)}
+.fn{display:grid;min-width:0}
+.fn .t{font-weight:600;overflow-wrap:anywhere}
+.fn .sub{font-size:13px;line-height:18px;color:var(--ink-muted);overflow-wrap:anywhere}
+.fbtns{display:flex;gap:4px}
+.chev{color:var(--ink-muted);font-size:20px;line-height:1}
+.code-in{text-transform:uppercase;font-family:var(--font-mono);letter-spacing:.12em}
+.code-in::placeholder{text-transform:none;font-family:var(--font-sans);letter-spacing:0}
+.code>div{display:grid;gap:2px}
 
 /* bant */
 .banner{display:flex;gap:var(--space-3);align-items:flex-start;justify-content:space-between;background:var(--streak-soft);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);color:var(--ink)}
@@ -157,11 +172,13 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-daily" data-tab="daily" type="button">Günlük <span class="cnt" id="cntDaily"></span></button>
     <button class="tab" role="tab" id="tab-general" data-tab="general" type="button">Genel <span class="cnt" id="cntGeneral"></span></button>
+    <button class="tab" role="tab" id="tab-friends" data-tab="friends" type="button">Arkadaşlar <span class="cnt" id="cntFriends"></span></button>
   </nav>
 
   <p class="loading" id="loading">Görevlerin yükleniyor…</p>
   <section id="view-daily" role="tabpanel" aria-labelledby="tab-daily" hidden></section>
   <section id="view-general" role="tabpanel" aria-labelledby="tab-general" hidden></section>
+  <section id="view-friends" role="tabpanel" aria-labelledby="tab-friends" hidden></section>
 
   <footer class="foot">
     <span class="sync" id="syncState" role="status"></span>
@@ -202,6 +219,20 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
       <button type="button" class="btn ghost" id="accClose">Kapat</button>
     </div>
   </div>
+</dialog>
+
+<dialog id="friendSheet">
+  <form class="sheet" id="friendForm" method="dialog">
+    <h2 id="frName"></h2>
+    <p class="muted" id="frSince"></p>
+    <div class="field"><label for="frNick">LAKAP</label><input id="frNick" maxlength="40" autocomplete="off"><span class="hint">Listende gerçek adının yerine bu görünür. Arkadaşın görmez, yönetici görebilir.</span></div>
+    <div class="row-btns">
+      <button type="button" class="btn danger" id="frRemove">Arkadaşlıktan çıkar</button>
+      <span class="grow"></span>
+      <button type="button" class="btn ghost" id="frCancel">Vazgeç</button>
+      <button type="submit" class="btn primary" id="frSave">Kaydet</button>
+    </div>
+  </form>
 </dialog>
 
 <div class="toast" id="toast" role="status" hidden></div>
@@ -409,12 +440,14 @@ function render() {
   $('themeBtn').innerHTML = themeIcons[S.theme];
   $('themeBtn').setAttribute('aria-label', `${themeNames[S.theme]}. Değiştirmek için bas.`);
   $('themeBtn').title = themeNames[S.theme];
-  for (const tab of ['daily', 'general']) {
+  if (!['daily', 'general', 'friends'].includes(S.tab)) S.tab = 'daily';
+  for (const tab of ['daily', 'general', 'friends']) {
     $('tab-' + tab).setAttribute('aria-selected', String(S.tab === tab));
     $('view-' + tab).hidden = S.tab !== tab;
   }
   renderDaily(r, cs);
   renderGeneral();
+  renderFriends();
   if (!S.timer || (!S.timer.running && !S.timer.fired)) document.title = 'Günlük Rutin';
   save();
 }
@@ -590,6 +623,7 @@ $('view-general').addEventListener('click', onAction);
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-form]'); if (!f) return;
   if (!loaded) { e.preventDefault(); return; }
+  if (f.dataset.form === 'friend') { e.preventDefault(); addFriend(f); return; }
   e.preventDefault();
   if (f.dataset.form === 'daily') {
     const name = $('dName').value.trim(); if (!name) return;
@@ -607,6 +641,7 @@ document.addEventListener('submit', e => {
 document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b || !loaded) return;
   S.tab = b.dataset.tab; render();
+  if (S.tab === 'friends') loadFriends();
 });
 $('themeBtn').addEventListener('click', () => {
   S.theme = { system: 'light', light: 'dark', dark: 'system' }[S.theme];
@@ -674,6 +709,121 @@ $('sheetForm').addEventListener('submit', e => {
   if (editType === 'daily') { t.dur = Math.max(0, Math.min(600, parseInt($('fDur').value, 10) || 0)); delete t.due; delete t.done; }
   else { t.due = $('fDue').value || ''; t.done = !!t.done; }
   $('sheet').close(); render();
+});
+
+// ---- arkadaşlar ----
+// Arkadaş listesi görevlerden ayrı tutulur; her açılışta ve sekmeye geçişte sunucudan okunur.
+let FR = null, frError = '', frBusy = false;
+const FR_MSG = {
+  gonderildi: 'İstek gönderildi. Arkadaşın kabul edince listende görünecek.',
+  kabul: 'Arkadaş eklendi.',
+  bekliyor: 'Bu kişiye zaten istek gönderdin, yanıt bekleniyor.',
+  zaten: 'Zaten arkadaşsınız.',
+  kendin: 'Bu senin kendi kodun.',
+  bulunamadi: 'Bu koda ait kullanıcı yok. Kodu kontrol et.'
+};
+async function loadFriends() {
+  if (!PROFILE) return;
+  const { data, error } = await sb.rpc('arkadaslarim');
+  if (error) frError = hataMesaji(error); else { FR = data || []; frError = ''; }
+  renderFriends();
+}
+function renderFriends() {
+  const view = $('view-friends');
+  const list = FR || [];
+  const incoming = list.filter(f => f.status === 'pending' && f.gelen);
+  const outgoing = list.filter(f => f.status === 'pending' && !f.gelen);
+  const friends = list.filter(f => f.status === 'accepted');
+  $('cntFriends').textContent = incoming.length || '';
+  if (!PROFILE) { view.innerHTML = ''; return; }
+  let h = `<div class="code"><div><span class="eyebrow">ARKADAŞ KODUN</span><b>${esc(PROFILE.friend_code)}</b></div><button class="btn secondary sm" type="button" data-fact="copy">Kopyala</button></div>`;
+  h += `<form class="add" data-form="friend"><input class="name code-in" id="fCode" placeholder="Arkadaşının kodunu gir" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Arkadaş kodu" required><button class="btn primary" type="submit">Ekle</button></form>`;
+  if (frError) h += `<div class="msg err" role="alert">${esc(frError)}</div>`;
+  if (FR === null && !frError) h += `<p class="loading">Arkadaşların yükleniyor…</p>`;
+  if (incoming.length) {
+    h += `<p class="sec">İSTEKLER (${incoming.length})</p><ul class="list">` + incoming.map(f =>
+      `<li class="frow"><span class="av" aria-hidden="true">${esc(initials(f.full_name))}</span><span class="fn"><span class="t">${esc(f.full_name)}</span><span class="sub">seni arkadaş olarak eklemek istiyor</span></span>`
+      + `<span class="fbtns"><button class="btn done sm" type="button" data-fact="accept" data-id="${f.id}">Kabul et</button><button class="btn ghost sm" type="button" data-fact="reject" data-id="${f.id}">Reddet</button></span></li>`).join('') + `</ul>`;
+  }
+  if (friends.length) {
+    h += `<p class="sec">ARKADAŞLARIN (${friends.length})</p><ul class="list">` + friends.map(f =>
+      `<li><button class="frow fbtn" type="button" data-fact="open" data-id="${f.id}"><span class="av" aria-hidden="true">${esc(initials(f.lakap || f.full_name))}</span>`
+      + `<span class="fn"><span class="t">${esc(f.lakap || f.full_name)}</span><span class="sub">${f.lakap ? esc(f.full_name) : 'Lakap takmak için dokun'}</span></span><span class="chev" aria-hidden="true">›</span></button></li>`).join('') + `</ul>`;
+  } else if (FR && !incoming.length && !outgoing.length) {
+    h += `<div class="empty"><h2>Henüz arkadaşın yok</h2><p>Kodunu arkadaşına gönder ya da onun kodunu yukarıya gir. İstek kabul edilince burada görünür ve ona lakap takabilirsin.</p></div>`;
+  }
+  if (outgoing.length) {
+    h += `<p class="sec">GÖNDERİLEN İSTEKLER</p><ul class="list">` + outgoing.map(f =>
+      `<li class="frow"><span class="av" aria-hidden="true">${esc(initials(f.full_name))}</span><span class="fn"><span class="t">${esc(f.full_name)}</span><span class="sub">yanıt bekleniyor</span></span>`
+      + `<span class="fbtns"><button class="btn ghost sm" type="button" data-fact="cancel" data-id="${f.id}">Geri al</button></span></li>`).join('') + `</ul>`;
+  }
+  const keep = document.activeElement && document.activeElement.id === 'fCode';
+  const draft = $('fCode') ? $('fCode').value : '';
+  view.innerHTML = `<div style="display:grid;gap:var(--space-4)">${h}</div>`;
+  if (draft) $('fCode').value = draft;
+  if (keep) $('fCode').focus();
+}
+async function friendCall(fn, args, okMsg) {
+  if (frBusy) return;
+  frBusy = true;
+  const { error } = await sb.rpc(fn, args);
+  frBusy = false;
+  if (error) { toast(hataMesaji(error)); return false; }
+  if (okMsg) toast(okMsg);
+  await loadFriends();
+  return true;
+}
+async function addFriend(form) {
+  const code = $('fCode').value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{6}$/.test(code)) { toast('Arkadaş kodu 6 karakter olmalı.'); return; }
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true;
+  const { data, error } = await sb.rpc('arkadas_ekle', { p_kod: code });
+  btn.disabled = false;
+  if (error) { toast(hataMesaji(error)); return; }
+  toast(FR_MSG[data] || 'İstek gönderildi.');
+  if (data === 'gonderildi' || data === 'kabul') $('fCode').value = '';
+  loadFriends();
+}
+$('view-friends').addEventListener('click', e => {
+  const b = e.target.closest('[data-fact]'); if (!b) return;
+  const id = b.dataset.id;
+  switch (b.dataset.fact) {
+    case 'copy':
+      Promise.resolve().then(() => navigator.clipboard.writeText(PROFILE.friend_code))
+        .then(() => toast('Kodun kopyalandı.'), () => toast(`Kodun: ${PROFILE.friend_code}`));
+      break;
+    case 'accept': friendCall('arkadas_yanit', { p_id: id, p_kabul: true }, 'Arkadaş eklendi.'); break;
+    case 'reject': friendCall('arkadas_yanit', { p_id: id, p_kabul: false }, 'İstek reddedildi.'); break;
+    case 'cancel': friendCall('arkadas_sil', { p_id: id }, 'İstek geri alındı.'); break;
+    case 'open': openFriend(id); break;
+  }
+});
+let frEdit = null, frArmed = false;
+const longDate = iso => { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+function openFriend(id) {
+  frEdit = (FR || []).find(f => f.id === id); if (!frEdit) return;
+  frArmed = false;
+  $('frRemove').textContent = 'Arkadaşlıktan çıkar'; $('frRemove').classList.remove('armed');
+  $('frName').textContent = frEdit.full_name;
+  $('frSince').textContent = `${longDate(frEdit.created_at)} tarihinden beri arkadaşsınız`;
+  $('frNick').value = frEdit.lakap || '';
+  $('friendSheet').showModal();
+}
+$('frCancel').addEventListener('click', () => $('friendSheet').close());
+$('friendForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const nick = $('frNick').value.trim();
+  if (nick === (frEdit.lakap || '')) { $('friendSheet').close(); return; }
+  $('frSave').disabled = true;
+  const ok = await friendCall('lakap_tak', { p_hedef: frEdit.friend_id, p_lakap: nick }, nick ? 'Lakap kaydedildi.' : 'Lakap kaldırıldı.');
+  $('frSave').disabled = false;
+  if (ok) $('friendSheet').close();
+});
+$('frRemove').addEventListener('click', async () => {
+  if (!frArmed) { frArmed = true; $('frRemove').textContent = 'Çıkarmak için tekrar bas'; $('frRemove').classList.add('armed'); return; }
+  const ok = await friendCall('arkadas_sil', { p_id: frEdit.id }, 'Arkadaşlıktan çıkarıldı.');
+  if (ok) $('friendSheet').close();
 });
 
 // ---- hesap ----
@@ -769,7 +919,7 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (!loaded) return;
   if (document.hidden) { clearTimeout(syncTimer); sync(); }
-  else { render(); touchSeen(); }
+  else { render(); touchSeen(); loadFriends(); }
 });
 
 // ---- açılış ----
@@ -810,6 +960,7 @@ async function boot() {
   loaded = true;
   showApp();
   touchSeen();
+  loadFriends();
 }
 boot();
 })();

@@ -8,10 +8,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Onest:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="tema.css">
 <style>
-  .wrap{max-width:720px;margin:0 auto;padding-block:var(--space-6) var(--space-8);display:grid;gap:var(--space-4)}
+  .wrap{max-width:720px;margin:0 auto;padding-block:var(--space-6) var(--space-8);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
   .hd{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);flex-wrap:wrap}
   h1{margin:0;font:600 20px/26px var(--font-display)}
   .eyebrow{margin:0;font:600 12px/16px var(--font-sans);letter-spacing:.06em;color:var(--ink-muted)}
+  .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:var(--radius-pill);padding:4px;max-width:360px}
+  .seg button{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;font-weight:600;color:var(--ink-muted)}
+  .seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
   .tools{display:flex;gap:var(--space-2);flex-wrap:wrap}
   .search{flex:1 1 200px;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-pill);padding:10px 16px;min-width:0}
   .search:focus{outline:none;border-color:var(--accent)}
@@ -22,10 +25,12 @@
   th{text-align:left;font:600 12px/16px var(--font-sans);letter-spacing:.06em;color:var(--ink-muted);padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
   td{padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
   tr:last-child td{border-bottom:0}
-  td.name{font-weight:600;white-space:normal;min-width:140px}
+  td.name{font-weight:600;white-space:normal;min-width:120px}
+  td.nick{white-space:normal;min-width:100px;color:var(--accent);font-weight:600}
   td .abs{display:block;font-size:12px;line-height:16px;color:var(--ink-muted)}
+  .arrow{color:var(--ink-muted)}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--done);margin-right:6px;vertical-align:1px}
-  .empty{padding:var(--space-6) var(--space-4);color:var(--ink-muted)}
+  .empty{margin:0;padding:var(--space-6) var(--space-4);color:var(--ink-muted)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="ayar.js"></script>
@@ -33,23 +38,34 @@
 <body>
 <main class="wrap">
   <header class="hd">
-    <div><p class="eyebrow">YÖNETİCİ</p><h1>Kullanıcılar</h1></div>
+    <div><p class="eyebrow">YÖNETİCİ</p><h1>Günlük Rutin</h1></div>
     <a class="btn secondary" href="index.html">Uygulamaya dön</a>
   </header>
   <div class="msg err" id="err" role="alert" hidden></div>
   <section id="content" hidden>
     <div style="display:grid;gap:var(--space-4)">
+      <div class="seg" role="tablist">
+        <button type="button" role="tab" id="tab-users" data-tab="users">Kullanıcılar</button>
+        <button type="button" role="tab" id="tab-nicks" data-tab="nicks">Lakaplar</button>
+      </div>
       <div class="stats" id="stats"></div>
       <div class="tools">
         <input class="search" id="q" type="search" placeholder="İsimle ara" aria-label="İsimle ara">
         <button class="btn secondary" type="button" id="refresh">Yenile</button>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" id="usersWrap">
         <table>
           <thead><tr><th>Ad soyad</th><th>Son giriş</th><th>Son görülme</th><th>Kayıt</th></tr></thead>
-          <tbody id="rows"></tbody>
+          <tbody id="userRows"></tbody>
         </table>
-        <p class="empty" id="none" hidden>Aramana uyan kullanıcı yok.</p>
+        <p class="empty" id="usersNone" hidden>Aramana uyan kullanıcı yok.</p>
+      </div>
+      <div class="table-wrap" id="nicksWrap" hidden>
+        <table>
+          <thead><tr><th>Lakabı takan</th><th></th><th>Kime</th><th>Lakap</th><th>Tarih</th></tr></thead>
+          <tbody id="nickRows"></tbody>
+        </table>
+        <p class="empty" id="nicksNone" hidden></p>
       </div>
     </div>
   </section>
@@ -68,34 +84,52 @@ function rel(iso) {
   for (const [lim, unit, div = 1] of steps) if (Math.abs(s) < lim) return Math.abs(s) < 45 && unit === 'second' ? 'az önce' : rtf.format(Math.round(s / div), unit);
 }
 const cell = iso => iso ? `${rel(iso)}<span class="abs">${absFmt.format(new Date(iso))}</span>` : '<span class="abs">hiç</span>';
-let users = [];
+const lastActive = u => Math.max(Date.parse(u.last_sign_in_at || 0) || 0, Date.parse(u.last_seen_at || 0) || 0);
+const has = (q, ...names) => !q || names.some(n => String(n).toLocaleLowerCase('tr').includes(q));
+let users = [], nicks = [], tab = 'users';
 
 function draw() {
   const q = $('q').value.trim().toLocaleLowerCase('tr');
-  const list = users.filter(u => !q || u.full_name.toLocaleLowerCase('tr').includes(q));
-  $('rows').innerHTML = list.map(u => {
-    const last = Math.max(Date.parse(u.last_sign_in_at || 0) || 0, Date.parse(u.last_seen_at || 0) || 0);
-    const active = Date.now() - last < 24 * 3600e3;
-    return `<tr><td class="name">${active ? '<span class="dot" title="Son 24 saatte aktif"></span>' : ''}${esc(u.full_name)}</td><td>${cell(u.last_sign_in_at)}</td><td>${cell(u.last_seen_at)}</td><td>${cell(u.created_at)}</td></tr>`;
-  }).join('');
-  $('none').hidden = list.length > 0;
-  const day = users.filter(u => Date.now() - Math.max(Date.parse(u.last_sign_in_at || 0) || 0, Date.parse(u.last_seen_at || 0) || 0) < 24 * 3600e3).length;
-  const week = users.filter(u => Date.now() - Math.max(Date.parse(u.last_sign_in_at || 0) || 0, Date.parse(u.last_seen_at || 0) || 0) < 7 * 24 * 3600e3).length;
-  $('stats').innerHTML = `<span><b>${users.length}</b>kullanıcı</span><span><b>${day}</b>son 24 saatte aktif</span><span><b>${week}</b>son 7 günde aktif</span>`;
+  $('tab-users').setAttribute('aria-selected', String(tab === 'users'));
+  $('tab-nicks').setAttribute('aria-selected', String(tab === 'nicks'));
+  $('usersWrap').hidden = tab !== 'users';
+  $('nicksWrap').hidden = tab !== 'nicks';
+
+  if (tab === 'users') {
+    const list = users.filter(u => has(q, u.full_name));
+    $('userRows').innerHTML = list.map(u => {
+      const active = Date.now() - lastActive(u) < 24 * 3600e3;
+      return `<tr><td class="name">${active ? '<span class="dot" title="Son 24 saatte aktif"></span>' : ''}${esc(u.full_name)}</td><td>${cell(u.last_sign_in_at)}</td><td>${cell(u.last_seen_at)}</td><td>${cell(u.created_at)}</td></tr>`;
+    }).join('');
+    $('usersNone').hidden = list.length > 0;
+    const day = users.filter(u => Date.now() - lastActive(u) < 24 * 3600e3).length;
+    const week = users.filter(u => Date.now() - lastActive(u) < 7 * 24 * 3600e3).length;
+    $('stats').innerHTML = `<span><b>${users.length}</b>kullanıcı</span><span><b>${day}</b>son 24 saatte aktif</span><span><b>${week}</b>son 7 günde aktif</span>`;
+  } else {
+    const list = nicks.filter(n => has(q, n.takan, n.hedef, n.lakap));
+    $('nickRows').innerHTML = list.map(n =>
+      `<tr><td class="name">${esc(n.takan)}</td><td class="arrow" aria-label="kime">→</td><td class="name">${esc(n.hedef)}</td><td class="nick">${esc(n.lakap)}</td><td>${cell(n.updated_at)}</td></tr>`).join('');
+    const none = $('nicksNone');
+    none.hidden = list.length > 0;
+    none.textContent = nicks.length ? 'Aramana uyan lakap yok.' : 'Henüz kimse lakap takmamış.';
+    const people = new Set(nicks.map(n => n.takan)).size;
+    $('stats').innerHTML = `<span><b>${nicks.length}</b>lakap</span><span><b>${people}</b>kişi lakap takmış</span>`;
+  }
 }
 
 async function load() {
   $('refresh').disabled = true;
-  const { data, error } = await sb.rpc('yonetici_kullanicilar');
+  const [u, n] = await Promise.all([sb.rpc('yonetici_kullanicilar'), sb.rpc('yonetici_lakaplar')]);
   $('refresh').disabled = false;
   $('loading').hidden = true;
+  const error = u.error || n.error;
   if (error) {
     $('content').hidden = true;
     $('err').hidden = false;
     $('err').textContent = error.code === '42501' ? 'Bu sayfa yalnızca yönetici hesabıyla açılır.' : hataMesaji(error);
     return;
   }
-  users = data || [];
+  users = u.data || []; nicks = n.data || [];
   $('err').hidden = true; $('content').hidden = false;
   draw();
 }
@@ -103,6 +137,10 @@ async function load() {
 sb.auth.getSession().then(({ data }) => {
   if (!data.session) { location.replace('giris.html'); return; }
   load();
+});
+document.querySelector('.seg').addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  tab = b.dataset.tab; draw();
 });
 $('q').addEventListener('input', draw);
 $('refresh').addEventListener('click', load);
