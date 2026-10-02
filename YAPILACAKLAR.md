@@ -26,6 +26,7 @@
 - [x] Şifre değişiminde mevcut şifre doğrulaması.
 - [x] Günlük iş eklerken gün ve saat seçimi.
 - [x] Ekip kurma, kodla katılma, başkanın üyelere görev vermesi, ekip durumu.
+- [x] Takvim (ay görünümü, gün ayrıntısı, güne iş ekleme), saat aralığı (başlangıç–bitiş), listelerde Düzenle ile silme.
 - [ ] Supabase'te 5-saat-ve-ekip.sql çalıştırılacak, iki Edge Function güncellenecek, sonra main'e push.
 
 ## D. E-posta (kullanıcı bekletti)

@@ -80,6 +80,26 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .cal-legend .dot{position:static;transform:none}
 .lg{width:12px;height:12px;border-radius:3px;display:inline-block}
 .lg.full{background:var(--done)}.lg.part{background:var(--done-soft);box-shadow:inset 0 0 0 1.5px var(--done)}.lg.frozen{background:repeating-linear-gradient(135deg,var(--surface-2) 0 3px,var(--accent-soft) 3px 6px)}
+.wk{display:grid;gap:6px}
+.wk-day{display:grid;grid-template-columns:44px minmax(0,1fr) 10px;gap:var(--space-3);align-items:start;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-md);padding:10px 12px;color:var(--ink)}
+.wk-day.today{border-color:var(--accent)}
+.wk-day.sel{outline:2px solid var(--ink);outline-offset:1px}
+.wk-day.none,.wk-day.rest{background:transparent}
+.wk-date{display:grid;justify-items:center;line-height:1.1}
+.wk-date small{font:600 11px/16px var(--font-sans);letter-spacing:.04em;color:var(--ink-muted)}
+.wk-date b{font:500 20px/26px var(--font-mono)}
+.wk-items{display:grid;gap:3px;min-width:0}
+.wk-it{display:flex;gap:6px;font-size:14px;line-height:20px;min-width:0}
+.wk-it span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wk-it i{font:500 12px/20px var(--font-mono);font-style:normal;color:var(--ink-muted);flex:none}
+.wk-it.ok span{text-decoration:line-through;color:var(--ink-muted)}
+.wk-it.no span{color:var(--streak)}
+.wk-more{font-size:13px;color:var(--ink-muted)}
+.wk-st{width:10px;height:10px;border-radius:50%;margin-top:6px;background:transparent}
+.wk-day.full .wk-st{background:var(--done)}
+.wk-day.part .wk-st{box-shadow:inset 0 0 0 2px var(--done)}
+.wk-day.miss .wk-st{background:var(--streak)}
+.wk-day.frozen .wk-st{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
 .cal-day{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-4);display:grid;gap:var(--space-3)}
 .cal-day-head{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);flex-wrap:wrap}
 .cal-day-head b{font:600 16px/22px var(--font-sans)}
@@ -1637,10 +1657,50 @@ function calState(k) {
   if (s === 'miss') return k === t ? 'open' : (r && r.done.length ? 'part' : 'miss');
   return s;
 }
+let calView = 'month';
+// O günün işleri: geçmişte beklenen ya da yapılanlar, gelecekte planlananlar; saate göre sıralı
+function dayItems(k) {
+  const past = k <= today(), rec = S.days[k];
+  const ds = daily().filter(x => (activeOn(x, k) && (past ? createdKey(x) <= k : true)) || (rec && rec.done.includes(x.id)))
+    .map(x => ({ t: x, done: !!(rec && rec.done.includes(x.id)) }));
+  const gs = general().filter(g => g.due === k).map(g => ({ t: g, done: !!g.done, due: true }));
+  return ds.concat(gs).sort((a, b) => byTime(a.t, b.t));
+}
+const monday = k => shift(k, -wdIndex(k));
+const shortDate = k => { const d = parseKey(k); return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`; };
 function renderCalendar() {
   const view = $('view-calendar'), t = today();
   if (!calMonth) calMonth = t.slice(0, 7);
   if (!calSel) calSel = t;
+  let h = `<div class="seg2" role="tablist"><button type="button" role="tab" data-calview="month" aria-selected="${calView === 'month'}">Ay</button><button type="button" role="tab" data-calview="week" aria-selected="${calView === 'week'}">Hafta</button></div>`;
+  h += calView === 'week' ? weekHtml() : monthHtml();
+  h += calDayHtml(calSel);
+  fillView(view, h, ['calName']);
+}
+function weekHtml() {
+  const t = today(), start = monday(calSel);
+  let full = 0, counted = 0, rows = '';
+  for (let i = 0; i < 7; i++) {
+    const k = shift(start, i), d = parseKey(k), s = calState(k), items = dayItems(k);
+    if (k <= t && (s === 'full' || s === 'part' || s === 'miss')) { counted++; if (s === 'full') full++; }
+    const shown = items.slice(0, 4);
+    const list = shown.length ? shown.map(it => {
+      const cls = k <= t ? (it.done ? 'ok' : (k < t ? 'no' : '')) : '';
+      return `<span class="wk-it ${cls}">${it.t.time ? `<i>${timeLabel(it.t)}</i>` : ''}<span>${esc(it.t.name)}</span></span>`;
+    }).join('') + (items.length > 4 ? `<span class="wk-more">+${items.length - 4} iş daha</span>` : '') : '<span class="wk-more">İş yok</span>';
+    rows += `<button type="button" class="wk-day ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}">`
+      + `<span class="wk-date"><small>${WD_SHORT[d.getDay()]}</small><b>${d.getDate()}</b></span><span class="wk-items">${list}</span>`
+      + `<span class="wk-st" title="${CAL_NAMES[s]}"></span></button>`;
+  }
+  const stats = counted ? `Bu hafta ${full}/${counted} gün tamam` : 'Bu hafta henüz sayılan gün yok';
+  return `<div class="cal-head"><button class="icon-btn" type="button" data-wknav="-7" aria-label="Önceki hafta">‹</button>`
+    + `<div class="cal-title"><b>${shortDate(start)} – ${shortDate(shift(start, 6))}</b><span class="st-sub">${stats}</span></div>`
+    + `<button class="icon-btn" type="button" data-wknav="7" aria-label="Sonraki hafta">›</button></div>`
+    + `<div class="wk">${rows}</div>`
+    + (monday(calSel) !== monday(t) ? `<button class="link" type="button" data-wknav="0">Bu haftaya dön</button>` : '');
+}
+function monthHtml() {
+  const t = today();
   const [y, m] = calMonth.split('-').map(Number);
   const days = new Date(y, m, 0).getDate(), lead = (new Date(y, m - 1, 1).getDay() + 6) % 7;
   let cells = DAY_NAMES.map(n => `<span class="cw">${n}</span>`).join('') + '<span class="cd blank"></span>'.repeat(lead);
@@ -1653,14 +1713,12 @@ function renderCalendar() {
     cells += `<button type="button" class="cd ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}" aria-label="${d} ${MONTHS[m - 1]}${CAL_NAMES[s] ? ': ' + CAL_NAMES[s] : ''}${due ? ', son tarihli iş var' : ''}">${d}${due ? '<i class="dot"></i>' : ''}</button>`;
   }
   const stats = counted ? `Bu ay ${full}/${counted} gün tamam${frozen ? ` · ${frozen} izin günü` : ''}` : 'Bu ay henüz sayılan gün yok';
-  let h = `<div class="cal-head"><button class="icon-btn" type="button" data-calnav="-1" aria-label="Önceki ay">‹</button>`
+  return `<div class="cal-head"><button class="icon-btn" type="button" data-calnav="-1" aria-label="Önceki ay">‹</button>`
     + `<div class="cal-title"><b>${MONTHS[m - 1]} ${y}</b><span class="st-sub">${stats}</span></div>`
-    + `<button class="icon-btn" type="button" data-calnav="1" aria-label="Sonraki ay">›</button></div>`;
-  h += `<div class="cal">${cells}</div>`;
-  h += `<div class="cal-legend"><span><i class="lg full"></i>tamam</span><span><i class="lg part"></i>eksik</span><span><i class="lg frozen"></i>izin</span><span><i class="dot"></i>son tarih</span>`
+    + `<button class="icon-btn" type="button" data-calnav="1" aria-label="Sonraki ay">›</button></div>`
+    + `<div class="cal">${cells}</div>`
+    + `<div class="cal-legend"><span><i class="lg full"></i>tamam</span><span><i class="lg part"></i>eksik</span><span><i class="lg frozen"></i>izin</span><span><i class="dot"></i>son tarih</span>`
     + (calMonth !== t.slice(0, 7) ? `<button class="link" type="button" data-calnav="0">Bugüne dön</button>` : '') + `</div>`;
-  h += calDayHtml(calSel);
-  fillView(view, h, ['calName']);
 }
 function calDayHtml(k) {
   const t = today(), d = parseKey(k), s = calState(k), rec = S.days[k];
@@ -1686,6 +1744,10 @@ function calDayHtml(k) {
   return h + `</div>`;
 }
 $('view-calendar').addEventListener('click', e => {
+  const cv = e.target.closest('[data-calview]');
+  if (cv) { calView = cv.dataset.calview; calMonth = calSel.slice(0, 7); renderCalendar(); return; }
+  const wn = e.target.closest('[data-wknav]');
+  if (wn) { const step = +wn.dataset.wknav; calSel = step ? shift(calSel, step) : today(); calMonth = calSel.slice(0, 7); renderCalendar(); return; }
   const c = e.target.closest('[data-cal]');
   if (c) { calSel = c.dataset.cal; renderCalendar(); return; }
   const n = e.target.closest('[data-calnav]');
