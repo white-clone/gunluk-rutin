@@ -373,7 +373,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
     <label class="toggle" for="fPoke" id="fPokeWrap"><input type="checkbox" id="fPoke"><span class="fn"><span class="t">Arkadaşlarım bu iş için beni dürtebilsin</span><span class="sub">İşin adı arkadaşlarına görünür; bitirmediysen sana bildirim gönderebilirler.</span></span></label>
     <div class="field" id="fDueWrap"><label for="fDue">SON TARİH (İSTEĞE BAĞLI)</label><input id="fDue" type="date"></div>
     <div class="field"><label for="fNote">NOT</label><p class="from-note" id="fFromNote" hidden></p><textarea id="fNote" maxlength="500" rows="3" placeholder="Bu işle ilgili hatırlatma, bağlantı, liste…"></textarea><span class="hint" id="fNoteCount"></span></div>
-    <div class="field" id="fShareWrap"><span class="lbl">EKİPLERLE PAYLAŞ</span><div id="fShare"></div><span class="hint">Paylaştığın iş, ekip üyelerinin takviminde görünür; isterlerse kendi listelerine ekler.</span><button class="link" type="button" id="fGive">Ekip üyesine görev olarak ver</button></div>
+    <div class="field" id="fShareWrap"><span class="lbl">EKİPLERLE PAYLAŞ</span><div id="fShare"></div><span class="hint">Seçimin Kaydet'e basınca uygulanır. Paylaştığın iş, ekip üyelerinin takviminde görünür; isterlerse kendi listelerine ekler.</span><button class="link" type="button" id="fGive">Ekip üyesine görev olarak ver</button></div>
     <div class="row-btns" id="moveBtns"><button type="button" class="btn secondary grow" id="upBtn">Yukarı taşı</button><button type="button" class="btn secondary grow" id="downBtn">Aşağı taşı</button></div>
     <div class="row-btns">
       <button type="button" class="btn danger" id="delBtn">Sil</button>
@@ -452,9 +452,9 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
     <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <div><h2>Ekiple paylaş</h2><p class="hint" id="spWhat"></p></div>
     <div id="spTeams"></div>
-    <p class="hint">İşaretlediğin ekiplerin üyeleri bu işi takvimlerinde görür; isterlerse kendi listelerine ekler. Notun paylaşılmaz.</p>
+    <p class="hint">Ekipleri seçip Paylaş'a bas. Seçtiğin ekiplerin üyeleri bu işi takvimlerinde görür; isterlerse kendi listelerine ekler. İşaretini kaldırdığın ekiplerle paylaşım kalkar. Notun paylaşılmaz.</p>
     <button class="link" type="button" id="spGive">Ekip üyesine görev olarak ver</button>
-    <div class="row-btns"><span class="grow"></span><button type="button" class="btn primary" data-close>Tamam</button></div>
+    <div class="row-btns"><span class="grow"></span><button type="button" class="btn ghost" data-close>Vazgeç</button><button type="button" class="btn primary" id="spSave">Paylaş</button></div>
   </div>
 </dialog>
 
@@ -1210,6 +1210,7 @@ $('sheetForm').addEventListener('submit', e => {
   if (editType === 'daily') { t.dur = Math.max(0, Math.min(600, parseInt($('fDur').value, 10) || 0)); t.days = editDays; t.pokeable = $('fPoke').checked; delete t.due; delete t.done; }
   else { t.due = $('fDue').value || ''; t.done = !!t.done; }
   $('sheet').close(); render();
+  if (!t.assigned) applyShares(t.id, $('fShare'));
 });
 
 // ---- arkadaşlar ----
@@ -2010,23 +2011,38 @@ function openShare(id) {
 }
 $('spGive').addEventListener('click', () => { const t = find(shareId); if (!t) return; $('shareSheet').close(); openGive(giveItem(t)); });
 $('shareSheet').addEventListener('close', () => { shareId = null; });
-$('spTeams').addEventListener('change', e => { const cb = e.target.closest('[data-share]'); if (cb && shareId) toggleShare(shareId, cb); });
 document.addEventListener('click', e => { const b = e.target.closest('[data-sharetask]'); if (b) { e.stopPropagation(); openShare(b.dataset.sharetask); } }, true);
-$('fShare').addEventListener('change', e => { const cb = e.target.closest('[data-share]'); if (cb) toggleShare(editId, cb); });
-async function toggleShare(id, cb) {
-  const team = cb.dataset.share, on = cb.checked;
-  cb.disabled = true;
+$('spSave').addEventListener('click', async () => {
+  if (!shareId) return;
+  $('spSave').disabled = true;
+  const ok = await applyShares(shareId, $('spTeams'));
+  $('spSave').disabled = false;
+  if (ok) $('shareSheet').close();
+});
+// Kutulardaki seçim, düğmeye basılınca uygulanır: yeni işaretlenenler paylaşılır, işareti kaldırılanların paylaşımı kalkar.
+async function applyShares(id, box) {
+  const boxes = [...box.querySelectorAll('[data-share]')];
+  if (!boxes.length) return true;
+  const have = SHARES.get(id) || new Set();
+  const add = boxes.filter(b => b.checked && !have.has(b.dataset.share)).map(b => b.dataset.share);
+  const del = boxes.filter(b => !b.checked && have.has(b.dataset.share)).map(b => b.dataset.share);
+  if (!add.length && !del.length) return true;
   // Yeni eklenen iş henüz sunucuya gitmediyse önce gönderilir
   if (!synced.tasks.has(id)) { clearTimeout(syncTimer); await sync(); }
-  if (!synced.tasks.has(id)) { cb.checked = !on; cb.disabled = false; toast('İş henüz kaydedilmedi. Bağlantını kontrol edip tekrar dene.'); return; }
-  const { error } = await sb.rpc(on ? 'paylas' : 'paylasimi_kaldir', { p_task: id, p_team: team });
-  cb.disabled = false;
-  if (error) { cb.checked = !on; toast(teamError(error)); return; }
+  if (!synced.tasks.has(id)) { toast('İş henüz kaydedilmedi. Bağlantını kontrol edip tekrar dene.'); return false; }
+  const teamName = t => ((TEAMS || []).find(x => x.id === t) || {}).name || 'ekip';
+  const done = { add: [], del: [] };
+  let err = null;
+  for (const t of add) { const { error } = await sb.rpc('paylas', { p_task: id, p_team: t }); if (error) err = error; else done.add.push(t); }
+  for (const t of del) { const { error } = await sb.rpc('paylasimi_kaldir', { p_task: id, p_team: t }); if (error) err = error; else done.del.push(t); }
   if (!SHARES.has(id)) SHARES.set(id, new Set());
-  SHARES.get(id)[on ? 'add' : 'delete'](team);
-  const name = ((TEAMS || []).find(x => x.id === team) || {}).name || 'ekip';
-  toast(on ? `"${name}" ekibiyle paylaşıldı.` : `"${name}" ekibiyle paylaşım kaldırıldı.`);
+  done.add.forEach(t => SHARES.get(id).add(t)); done.del.forEach(t => SHARES.get(id).delete(t));
+  if (err) toast(teamError(err));
+  else if (done.add.length && !done.del.length) toast(`${done.add.map(t => `"${teamName(t)}"`).join(', ')} ekibiyle paylaşıldı.`);
+  else if (done.del.length && !done.add.length) toast(`${done.del.map(t => `"${teamName(t)}"`).join(', ')} ekibiyle paylaşım kaldırıldı.`);
+  else toast('Paylaşım güncellendi.');
   loadShares();
+  return !err;
 }
 // Ekip planını kendi listene kopyala
 function copyPlan(id, k) {
