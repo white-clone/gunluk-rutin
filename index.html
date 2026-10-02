@@ -127,6 +127,11 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .days.sm button{padding:7px 0;font-size:12px}
 .time-in{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:5px 6px;font:500 13px/18px var(--font-mono);color:var(--ink);min-width:0}
 .members{display:grid;gap:var(--space-3)}
+.member .checks{padding-left:0}
+[data-addslot]{display:grid;gap:var(--space-2)}
+[data-addslot] .btn{justify-self:start}
+.check .fn{display:grid;min-width:0}
+.check .sub{font-size:13px;line-height:18px;color:var(--ink-muted)}
 .member{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:var(--space-3)}
 .member .frow{padding:0}
 .tag{display:inline-block;font:600 11px/16px var(--font-sans);letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);border-radius:var(--radius-pill);padding:0 8px;margin-left:4px;vertical-align:1px}
@@ -408,6 +413,16 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
       <button type="button" class="btn ghost" id="yCancel">Vazgeç</button>
       <button type="submit" class="btn primary">Kaydet</button>
     </div>
+  </form>
+</dialog>
+
+<dialog id="newTeam">
+  <form class="sheet" id="newTeamForm" method="dialog" novalidate>
+    <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
+    <h2>Yeni ekip</h2>
+    <div class="field"><label for="ntName">EKİP ADI</label><input id="ntName" maxlength="40" placeholder="Örn. Sabah Kulübü" autocomplete="off" required></div>
+    <div class="field"><span class="lbl">ARKADAŞLARINI EKLE (İSTEĞE BAĞLI)</span><div id="ntFriends"></div><span class="hint">Seçtiğin arkadaşlar ekibe hemen eklenir. Diğer kişiler ekip koduyla katılabilir.</span></div>
+    <div class="row-btns"><span class="grow"></span><button type="button" class="btn ghost" data-close>Vazgeç</button><button type="submit" class="btn primary" id="ntSave">Ekibi kur</button></div>
   </form>
 </dialog>
 
@@ -1211,6 +1226,7 @@ $('view-friends').addEventListener('click', e => {
   if (ft) { S.ftab = ft.dataset.ftab; render(); if (S.ftab === 'teams') loadTeams(); return; }
   const tb = e.target.closest('[data-team]');
   if (tb) { openTeam(tb.dataset.team); return; }
+  if (e.target.closest('[data-newteam]')) { openNewTeam(); return; }
   const b = e.target.closest('[data-fact]'); if (!b) return;
   const id = b.dataset.id;
   switch (b.dataset.fact) {
@@ -1466,6 +1482,7 @@ const TEAM_ERR = {
   baskan_degil: 'Bunu yalnızca ekip başkanı yapabilir.',
   uye_degil: 'Bu kişi artık ekipte değil.',
   ad_bos: 'Görevin adını yaz.',
+  ad_kisa: 'Ekip adı en az 2 harf olmalı.',
   baskan_ayrilamaz: 'Başkan ekipten ayrılamaz; ekibi silebilirsin.',
   baskan_cikamaz: 'Başkan kendini çıkaramaz.',
   ekip_uyesi_degil: 'Bu ekibin üyesi değilsin.'
@@ -1478,7 +1495,7 @@ async function loadTeams() {
   renderFriends();
 }
 function teamsHtml() {
-  let h = `<form class="add" data-form="team-new"><input class="name" id="tName" maxlength="40" placeholder="Yeni ekip adı" aria-label="Yeni ekip adı" required><button class="btn primary" type="submit">Kur</button></form>`;
+  let h = `<button class="btn primary block" type="button" data-newteam>Yeni ekip kur</button>`;
   h += `<form class="add" data-form="team-join"><input class="name code-in" id="tCode" maxlength="6" placeholder="Ekip koduyla katıl" aria-label="Ekip kodu" autocomplete="off" autocapitalize="characters" spellcheck="false" required><button class="btn secondary" type="submit">Katıl</button></form>`;
   if (teamErr) h += `<div class="msg err" role="alert">${esc(teamErr)}</div>`;
   if (TEAMS === null && !teamErr) return h + `<p class="loading">Ekiplerin yükleniyor…</p>`;
@@ -1567,9 +1584,58 @@ function drawTeamBody() {
     }
     if (TEAM.lider_mi) h += `<button class="link" type="button" data-give="${m.user_id}">+ Görev ver</button><div data-slot="${m.user_id}"></div>`;
     return h + `</div>`;
-  }).join('');
+  }).join('') + (TEAM.lider_mi ? `<div class="member"><button class="link" type="button" data-addfriends>+ Arkadaşlarını ekibe ekle</button><div data-addslot></div></div>` : '');
 }
+// Arkadaş seçme listesi (lakabı varsa lakabıyla); hariç tutulanlar listede görünmez
+function friendChecks(exclude = []) {
+  const list = (FR || []).filter(f => f.status === 'accepted' && !exclude.includes(f.friend_id));
+  if (!list.length) return `<p class="hint">${(FR || []).some(f => f.status === 'accepted') ? 'Bütün arkadaşların zaten bu ekipte.' : 'Henüz arkadaşın yok. Arkadaşlar sekmesinden kodla arkadaş ekleyebilirsin.'}</p>`;
+  return `<div class="checks">` + list.map(f => `<label class="check"><input type="checkbox" value="${f.friend_id}"><span class="fn"><span class="t">${esc(f.lakap || f.full_name)}</span>${f.lakap ? `<span class="sub">${esc(f.full_name)}</span>` : ''}</span></label>`).join('') + `</div>`;
+}
+async function ensureFriends() { if (FR === null) await loadFriends(); }
+async function openNewTeam() {
+  await ensureFriends();
+  $('ntName').value = '';
+  $('ntFriends').innerHTML = friendChecks();
+  $('newTeam').showModal();
+  if (matchMedia('(pointer:fine)').matches) $('ntName').focus();
+}
+$('newTeamForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('ntName').value.trim();
+  if (name.length < 2) { toast('Ekip adı en az 2 harf olmalı.'); $('ntName').focus(); return; }
+  const ids = [...$('ntFriends').querySelectorAll('input:checked')].map(i => i.value);
+  $('ntSave').disabled = true;
+  const { error } = await sb.rpc('ekip_kur', { p_ad: name, p_uyeler: ids });
+  $('ntSave').disabled = false;
+  if (error) { toast(teamError(error)); return; }
+  $('newTeam').close();
+  toast(ids.length ? `"${name}" kuruldu, ${ids.length} arkadaşın eklendi.` : `"${name}" kuruldu. Kodunu paylaşarak kişileri davet et.`);
+  S.ftab = 'teams'; loadTeams();
+});
 $('tmBody').addEventListener('click', async e => {
+  if (e.target.closest('[data-addfriends]')) {
+    const slot = $('tmBody').querySelector('[data-addslot]');
+    if (slot.innerHTML) { slot.innerHTML = ''; return; }
+    await ensureFriends();
+    const inTeam = [...new Set(TEAM_ROWS.map(r => r.user_id))];
+    const checks = friendChecks(inTeam);
+    slot.innerHTML = checks + (checks.includes('type="checkbox"') ? `<button class="btn primary sm" type="button" data-addsel>Seçilenleri ekle</button>` : '');
+    return;
+  }
+  const addSel = e.target.closest('[data-addsel]');
+  if (addSel) {
+    const ids = [...$('tmBody').querySelectorAll('[data-addslot] input:checked')].map(i => i.value);
+    if (!ids.length) { toast('Eklemek için arkadaş seç.'); return; }
+    addSel.disabled = true;
+    const { data: n, error } = await sb.rpc('ekibe_arkadas_ekle', { p_team: TEAM.id, p_uyeler: ids });
+    if (error) { addSel.disabled = false; toast(teamError(error)); return; }
+    toast(n ? `${n} arkadaşın ekibe eklendi.` : 'Kimse eklenmedi; ekip dolu olabilir.');
+    TEAM.uye_sayisi += n || 0;
+    $('tmSub').textContent = `Ekip başkanısın · ${TEAM.uye_sayisi} kişi`;
+    loadTeamBody(); loadTeams();
+    return;
+  }
   const give = e.target.closest('[data-give]');
   if (give) {
     const slot = $('tmBody').querySelector(`[data-slot="${give.dataset.give}"]`);
