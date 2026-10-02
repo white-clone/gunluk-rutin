@@ -31,8 +31,8 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .avatar{font:600 13px/1 var(--font-sans);color:var(--accent);background:var(--accent-soft);border-color:transparent}
 
 /* sekmeler */
-.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface-2);border-radius:var(--radius-pill);padding:4px}
-.tab{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;font-size:13px;font-weight:600;min-width:0;color:var(--ink-muted);display:flex;justify-content:center;gap:4px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--surface-2);border-radius:var(--radius-pill);padding:4px}
+.tab{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;font-size:14px;font-weight:600;min-width:0;color:var(--ink-muted);display:flex;justify-content:center;gap:4px}
 .tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 .cnt{font:500 13px/22px var(--font-mono);color:var(--ink-muted)}
 
@@ -115,12 +115,13 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .crow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:var(--space-2);align-items:center;padding:6px 0}
 .crow .t{overflow-wrap:anywhere}
 .mk{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-content:center}
+button.mk{padding:0;cursor:pointer;background:transparent;color:inherit}
 .mk.ok{background:var(--done);border-color:var(--done);color:var(--on-accent)}
 .mk.ok svg{width:11px;height:11px}
 .mk.plan{border-style:dashed}
 .cal-day .add{background:var(--bg)}
 .hint{margin:0;font-size:13px;line-height:18px;color:var(--ink-muted)}
-.seg2{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
+.seg2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-bottom:1px solid var(--line)}
 .seg2 button{border:0;background:none;padding:10px 0;font-weight:600;color:var(--ink-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .seg2 button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .add-wrap{display:grid;gap:6px}
@@ -345,14 +346,12 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
 
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-daily" data-tab="daily" type="button">Günlük <span class="cnt" id="cntDaily"></span></button>
-    <button class="tab" role="tab" id="tab-general" data-tab="general" type="button">Genel <span class="cnt" id="cntGeneral"></span></button>
-    <button class="tab" role="tab" id="tab-calendar" data-tab="calendar" type="button">Takvim</button>
+    <button class="tab" role="tab" id="tab-calendar" data-tab="calendar" type="button">Takvim <span class="cnt" id="cntCalendar"></span></button>
     <button class="tab" role="tab" id="tab-friends" data-tab="friends" type="button">Arkadaşlar <span class="cnt" id="cntFriends"></span></button>
   </nav>
 
   <p class="loading" id="loading">Görevlerin yükleniyor…</p>
   <section id="view-daily" role="tabpanel" aria-labelledby="tab-daily" hidden></section>
-  <section id="view-general" role="tabpanel" aria-labelledby="tab-general" hidden></section>
   <section id="view-calendar" role="tabpanel" aria-labelledby="tab-calendar" hidden></section>
   <section id="view-friends" role="tabpanel" aria-labelledby="tab-friends" hidden></section>
 
@@ -788,7 +787,7 @@ function render() {
   const doneN = list.filter(t => r.done.includes(t.id)).length;
   $('cntDaily').textContent = list.length ? `${doneN}/${list.length}` : '';
   const openG = general().filter(t => !t.done).length;
-  $('cntGeneral').textContent = openG || '';
+  $('cntCalendar').textContent = openG || '';
   const themeNames = { system: 'Sistem teması', light: 'Açık tema', dark: 'Koyu tema' };
   const themeIcons = {
     system: '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="6.5"/><path d="M9 2.5v13a6.5 6.5 0 0 0 0-13z" fill="currentColor"/></svg>',
@@ -798,13 +797,14 @@ function render() {
   $('themeBtn').innerHTML = themeIcons[S.theme];
   $('themeBtn').setAttribute('aria-label', `${themeNames[S.theme]}. Değiştirmek için bas.`);
   $('themeBtn').title = themeNames[S.theme];
-  if (!['daily', 'general', 'calendar', 'friends'].includes(S.tab)) S.tab = 'daily';
-  for (const tab of ['daily', 'general', 'calendar', 'friends']) {
+  if (S.tab === 'general') { S.tab = 'calendar'; calView = 'list'; } // eski Genel sekmesi
+  if (!['daily', 'calendar', 'friends'].includes(S.tab)) S.tab = 'daily';
+  for (const tab of ['daily', 'calendar', 'friends']) {
     $('tab-' + tab).setAttribute('aria-selected', String(S.tab === tab));
     $('view-' + tab).hidden = S.tab !== tab;
   }
   renderDaily(r, cs);
-  renderGeneral();
+  
   if (S.tab === 'calendar') renderCalendar();
   renderFriends();
   if (!S.timer || (!S.timer.running && !S.timer.fired)) document.title = 'Günlük Rutin';
@@ -966,42 +966,37 @@ function streakHtml(cs, list) {
     + `<span class="st-sub">${weekSummary()}</span>${freezeBtn}</div>`;
 }
 
-function renderGeneral() {
+// Tek seferlik işler (eski "Genel" sekmesi) artık Takvim'in Liste görünümü
+let doneOpen = false;
+function generalHtml() {
   const all = general();
-  const open = all.filter(t => !t.done).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.created - b.created);
+  const open = all.filter(t => !t.done).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || (a.time || '99').localeCompare(b.time || '99') || a.created - b.created);
   const closed = all.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-  let h = `<form class="add g" data-form="general"><input class="name" id="gName" placeholder="Genel iş ekle" maxlength="80" aria-label="Genel iş adı" required><input class="date" id="gDue" type="date" aria-label="Son tarih"><button class="btn primary" type="submit">Ekle</button></form>`;
+  let h = `<form class="add g" data-form="general"><input class="name" id="gName" placeholder="Tek seferlik iş ekle" maxlength="80" aria-label="Tek seferlik iş adı" required><input class="date" id="gDue" type="date" aria-label="Tarih (isteğe bağlı)"><button class="btn primary" type="submit">Ekle</button></form>`;
   if (!all.length) {
-    h += `<div class="empty"><h2>Bir kez yapılacak işler</h2><p>Fatura ödemek, randevu almak gibi tekrar etmeyen işler buraya. Seriye sayılmaz; istersen son tarih ekle.</p></div>`;
+    return h + `<div class="empty"><h2>Bir kez yapılacak işler</h2><p>Fatura ödemek, randevu almak gibi tekrar etmeyen işler burada listelenir. Tarih verirsen takvimde de görünür; seriye sayılmaz.</p></div>`;
   }
   if (open.length) {
-    h += editHead('AÇIK İŞLER', 'general') + `<ol class="list">`;
+    h += editHead('YAPILACAKLAR', 'general') + `<ol class="list">`;
     for (const t of open) {
       const due = dueLabel(t.due);
       h += `<li class="row next"><button class="mark" type="button" data-act="gtoggle" data-id="${t.id}" aria-label="${esc(t.name)}: tamamlandı olarak işaretle"></button>`
         + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${t.assigned ? `<span class="sub">${esc(assignLabel(t))}</span>` : isShared(t) ? '<span class="sub">paylaşıldı</span>' : ''}${notePreview(t) ? `<span class="sub">${notePreview(t)}</span>` : ''}</button>`
-        + (listEdit === 'general' ? delCtl(t) : `<span class="crow-r"><span class="meta${due.late ? ' late' : ''}">${[due.text, timeLabel(t)].filter(Boolean).join(' · ')}</span>${shareBtn(t)}</span>`) + '</li>';
+        + (listEdit === 'general' ? delCtl(t) : `<span class="crow-r"><span class="meta${due.late ? ' late' : ''}">${[due.text || 'tarihsiz', timeLabel(t)].filter(Boolean).join(' · ')}</span>${shareBtn(t)}</span>`) + '</li>';
     }
     h += `</ol>`;
-  } else if (all.length) {
+  } else {
     h += `<div class="empty"><h2>Açık iş kalmadı</h2><p>Yeni bir iş eklemek için yukarıdaki alanı kullan.</p></div>`;
   }
   if (closed.length) {
-    h += `<details><summary>TAMAMLANANLAR (${closed.length})</summary><ol class="list">`;
+    h += `<details id="doneList"${doneOpen ? ' open' : ''}><summary>TAMAMLANANLAR (${closed.length})</summary><ol class="list">`;
     for (const t of closed) {
       h += `<li class="row done"><button class="mark" type="button" data-act="gtoggle" data-id="${t.id}" aria-label="${esc(t.name)}: geri al">${check}</button>`
         + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span></button><span class="meta"></span></li>`;
     }
     h += `</ol><div style="padding-top:var(--space-2)"><button class="btn ghost" type="button" data-act="clearDone">Tamamlananları temizle</button></div></details>`;
   }
-  const view = $('view-general');
-  const wasOpen = view.querySelector('details') && view.querySelector('details').open;
-  const keep = document.activeElement && document.activeElement.id === 'gName';
-  const draft = $('gName') ? $('gName').value : '';
-  view.innerHTML = `<div style="display:grid;gap:var(--space-4)">${h}</div>`;
-  if (wasOpen && view.querySelector('details')) view.querySelector('details').open = true;
-  if (draft) $('gName').value = draft;
-  if (keep) $('gName').focus();
+  return h;
 }
 
 // ---- eylemler ----
@@ -1059,7 +1054,8 @@ function onAction(e) {
   render();
 }
 $('view-daily').addEventListener('click', onAction);
-$('view-general').addEventListener('click', onAction);
+$('view-calendar').addEventListener('click', onAction);
+$('view-calendar').addEventListener('toggle', e => { if (e.target.id === 'doneList') doneOpen = e.target.open; }, true);
 // Günlük iş ekleme: hangi günler ve saat (form yeniden çizilse de seçim korunur)
 let addDays = 127, addTime = '', addEnd = '', addDur = '', addOpen = false;
 $('view-daily').addEventListener('click', e => {
@@ -1862,7 +1858,8 @@ function renderCalendar() {
   const view = $('view-calendar'), t = today();
   if (!calMonth) calMonth = t.slice(0, 7);
   if (!calSel) calSel = t;
-  let h = `<div class="seg2" role="tablist"><button type="button" role="tab" data-calview="month" aria-selected="${calView === 'month'}">Ay</button><button type="button" role="tab" data-calview="week" aria-selected="${calView === 'week'}">Hafta</button></div>`;
+  let h = `<div class="seg2" role="tablist"><button type="button" role="tab" data-calview="month" aria-selected="${calView === 'month'}">Ay</button><button type="button" role="tab" data-calview="week" aria-selected="${calView === 'week'}">Hafta</button><button type="button" role="tab" data-calview="list" aria-selected="${calView === 'list'}">Liste</button></div>`;
+  if (calView === 'list') { fillView(view, h + generalHtml(), ['gName', 'calName']); return; }
   h += calView === 'week' ? weekHtml() : monthHtml();
   h += calDayHtml(calSel);
   fillView(view, h, ['calName']);
@@ -1926,7 +1923,7 @@ function calDayHtml(k) {
   }
   if (dueTasks.length) {
     h += `<p class="sec">SON TARİHLİ</p><ul class="list">` + dueTasks.map(g =>
-      `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<button class="fn cal-open" type="button" data-caledit="${g.id}" aria-label="${esc(g.name)} işini düzenle"><span class="t">${esc(g.name)}</span>${g.assigned ? `<span class="sub">${esc(assignLabel(g))}</span>` : ''}${notePreview(g) ? `<span class="sub">${notePreview(g)}</span>` : ''}</button><span class="crow-r"><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span>${shareBtn(g)}${calDel(g)}</span></li>`).join('') + `</ul>`;
+      `<li class="crow">${`<button class="mk${g.done ? ' ok' : ' plan'}" type="button" data-act="gtoggle" data-id="${g.id}" aria-label="${esc(g.name)}: ${g.done ? 'geri al' : 'tamamlandı olarak işaretle'}">${g.done ? check : ''}</button>`}<button class="fn cal-open" type="button" data-caledit="${g.id}" aria-label="${esc(g.name)} işini düzenle"><span class="t">${esc(g.name)}</span>${g.assigned ? `<span class="sub">${esc(assignLabel(g))}</span>` : ''}${notePreview(g) ? `<span class="sub">${notePreview(g)}</span>` : ''}</button><span class="crow-r"><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span>${shareBtn(g)}${calDel(g)}</span></li>`).join('') + `</ul>`;
   }
   const plans = plansOn(k);
   if (plans.length) {
@@ -1977,7 +1974,6 @@ $('view-calendar').addEventListener('click', e => {
     else { const [y, m] = calMonth.split('-').map(Number); const d = new Date(y, m - 1 + step, 1); calMonth = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; }
     renderCalendar(); return;
   }
-  if (e.target.closest('[data-act="fixY"]')) openYesterday();
 });
 
 // ---- ekiple paylaşma ----
