@@ -79,7 +79,8 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .dot.team{background:var(--accent)}
 .mk.team{border-color:var(--accent);background:var(--accent-soft)}
 .wk-it.team span{color:var(--accent)}
-.wk-it.team i::before{content:'ekip · '}
+.share-box{display:grid;gap:var(--space-2)}
+.share-box .eyebrow{margin-top:4px}
 .cal-legend{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;font-size:12px;color:var(--ink-muted)}
 .cal-legend span{display:inline-flex;align-items:center;gap:4px;position:relative}
 .cal-legend .dot{position:static;transform:none}
@@ -373,7 +374,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
     <label class="toggle" for="fPoke" id="fPokeWrap"><input type="checkbox" id="fPoke"><span class="fn"><span class="t">Arkadaşlarım bu iş için beni dürtebilsin</span><span class="sub">İşin adı arkadaşlarına görünür; bitirmediysen sana bildirim gönderebilirler.</span></span></label>
     <div class="field" id="fDueWrap"><label for="fDue">SON TARİH (İSTEĞE BAĞLI)</label><input id="fDue" type="date"></div>
     <div class="field"><label for="fNote">NOT</label><p class="from-note" id="fFromNote" hidden></p><textarea id="fNote" maxlength="500" rows="3" placeholder="Bu işle ilgili hatırlatma, bağlantı, liste…"></textarea><span class="hint" id="fNoteCount"></span></div>
-    <div class="field" id="fShareWrap"><span class="lbl">EKİPLERLE PAYLAŞ</span><div id="fShare"></div><span class="hint">Seçimin Kaydet'e basınca uygulanır. Paylaştığın iş, ekip üyelerinin takviminde görünür; isterlerse kendi listelerine ekler.</span><button class="link" type="button" id="fGive">Ekip üyesine görev olarak ver</button></div>
+    <div class="field" id="fShareWrap"><span class="lbl">PAYLAŞ</span><div id="fShare"></div><span class="hint">Seçimin Kaydet'e basınca uygulanır. Paylaştığın iş, seçtiğin arkadaşlarının ve ekip üyelerinin takviminde görünür; isterlerse kendi listelerine ekler.</span><button class="link" type="button" id="fGive">Ekip üyesine görev olarak ver</button></div>
     <div class="row-btns" id="moveBtns"><button type="button" class="btn secondary grow" id="upBtn">Yukarı taşı</button><button type="button" class="btn secondary grow" id="downBtn">Aşağı taşı</button></div>
     <div class="row-btns">
       <button type="button" class="btn danger" id="delBtn">Sil</button>
@@ -450,9 +451,9 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
 <dialog id="shareSheet">
   <div class="sheet">
     <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
-    <div><h2>Ekiple paylaş</h2><p class="hint" id="spWhat"></p></div>
+    <div><h2>Paylaş</h2><p class="hint" id="spWhat"></p></div>
     <div id="spTeams"></div>
-    <p class="hint">Ekipleri seçip Paylaş'a bas. Seçtiğin ekiplerin üyeleri bu işi takvimlerinde görür; isterlerse kendi listelerine ekler. İşaretini kaldırdığın ekiplerle paylaşım kalkar. Notun paylaşılmaz.</p>
+    <p class="hint">Arkadaşlarını ya da ekiplerini seçip Paylaş'a bas. Seçtiğin kişiler bu işi takvimlerinde görür ve bildirim alır; isterlerse kendi listelerine ekler. İşaretini kaldırdıklarınla paylaşım kalkar. Notun paylaşılmaz.</p>
     <button class="link" type="button" id="spGive">Ekip üyesine görev olarak ver</button>
     <div class="row-btns"><span class="grow"></span><button type="button" class="btn ghost" data-close>Vazgeç</button><button type="button" class="btn primary" id="spSave">Paylaş</button></div>
   </div>
@@ -632,7 +633,7 @@ const noteIcon = '<svg class="ni" width="12" height="12" viewBox="0 0 12 12" fil
 // Notun ilk satırından kısa bir önizleme (önce kişinin kendi notu, yoksa görevi verenin notu)
 const notePreview = t => { const n = (t.note || t.assignNote || '').split('\n')[0].trim(); return n ? `<span class="np">${noteIcon}${esc(n.length > 42 ? n.slice(0, 40) + '…' : n)}</span>` : ''; };
 const shareIcon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="3.5" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" stroke="currentColor" stroke-width="1.5"/></svg>';
-const shareBtn = t => t.assigned ? '' : `<button class="x share${SHARES.has(t.id) && SHARES.get(t.id).size ? ' on' : ''}" type="button" data-sharetask="${t.id}" aria-label="${esc(t.name)} işini ekiple paylaş" title="Ekiple paylaş">${shareIcon}</button>`;
+const shareBtn = t => t.assigned ? '' : `<button class="x share${isShared(t) ? ' on' : ''}" type="button" data-sharetask="${t.id}" aria-label="${esc(t.name)} işini paylaş" title="Paylaş">${shareIcon}</button>`;
 // Ekip görevi: kim verdi, hangi ekipten
 const assignLabel = t => t.assigned ? [t.by ? `${t.by} verdi` : '', t.team].filter(Boolean).join(' · ') : '';
 const timeLabel = t => t.time ? (t.end ? `${t.time}–${t.end}` : t.time) : '';
@@ -822,7 +823,7 @@ function renderDaily(r, cs) {
         const meta = isDone ? (r.at[t.id] || 'bitti') : isSkip ? 'atlandı' : isNow ? [timeLabel(t), 'şimdi'].filter(Boolean).join(' · ') : [timeLabel(t), t.dur ? `${t.dur} dk` : ''].filter(Boolean).join(' · ');
         const late = !isDone && !isSkip && t.time && (t.end || t.time) < nowHM();
         const ts = taskStreak(t.id);
-        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', t.assigned ? `<span>${esc(assignLabel(t))}</span>` : '', SHARES.has(t.id) && SHARES.get(t.id).size ? '<span>paylaşıldı</span>' : '', notePreview(t)].filter(Boolean).join('');
+        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', t.assigned ? `<span>${esc(assignLabel(t))}</span>` : '', isShared(t) ? '<span>paylaşıldı</span>' : '', notePreview(t)].filter(Boolean).join('');
         const label = isDone ? `${t.name}: tamamlandı, geri al` : `${t.name}: tamamlandı olarak işaretle`;
         h += `<li class="row ${cls}"><button class="mark" type="button" data-act="toggle" data-id="${t.id}" aria-label="${esc(label)}">${isDone ? check : isSkip ? '' : i + 1}</button>`
           + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${sub ? `<span class="sub">${sub}</span>` : ''}</button>`
@@ -963,7 +964,7 @@ function renderGeneral() {
     for (const t of open) {
       const due = dueLabel(t.due);
       h += `<li class="row next"><button class="mark" type="button" data-act="gtoggle" data-id="${t.id}" aria-label="${esc(t.name)}: tamamlandı olarak işaretle"></button>`
-        + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${t.assigned ? `<span class="sub">${esc(assignLabel(t))}</span>` : SHARES.has(t.id) && SHARES.get(t.id).size ? '<span class="sub">paylaşıldı</span>' : ''}${notePreview(t) ? `<span class="sub">${notePreview(t)}</span>` : ''}</button>`
+        + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${t.assigned ? `<span class="sub">${esc(assignLabel(t))}</span>` : isShared(t) ? '<span class="sub">paylaşıldı</span>' : ''}${notePreview(t) ? `<span class="sub">${notePreview(t)}</span>` : ''}</button>`
         + (listEdit === 'general' ? delCtl(t) : `<span class="crow-r"><span class="meta${due.late ? ' late' : ''}">${[due.text, timeLabel(t)].filter(Boolean).join(' · ')}</span>${shareBtn(t)}</span>`) + '</li>';
     }
     h += `</ol>`;
@@ -1871,7 +1872,7 @@ function weekHtml() {
     const shown = items.slice(0, 4);
     const list = shown.length ? shown.map(it => {
       const cls = it.plan ? 'team' : k <= t ? (it.done ? 'ok' : (k < t ? 'no' : '')) : '';
-      return `<span class="wk-it ${cls}">${it.t.time ? `<i>${timeLabel(it.t)}</i>` : it.due ? '<i>tüm gün</i>' : ''}<span>${esc(it.t.name)}${it.t.assigned && it.t.by ? `<small> · ${esc(it.t.by)} verdi</small>` : ''}</span></span>`;
+      return `<span class="wk-it ${cls}">${it.t.time ? `<i>${timeLabel(it.t)}</i>` : it.due ? '<i>tüm gün</i>' : ''}<span>${esc(it.t.name)}${it.t.assigned && it.t.by ? `<small> · ${esc(it.t.by)} verdi</small>` : it.plan ? `<small> · ${esc(it.plan.owner_name)}</small>` : ''}</span></span>`;
     }).join('') + (items.length > 4 ? `<span class="wk-more">+${items.length - 4} iş daha</span>` : '') : '<span class="wk-more">İş yok</span>';
     rows += `<button type="button" class="wk-day ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}">`
       + `<span class="wk-date"><small>${WD_SHORT[d.getDay()]}</small><b>${d.getDate()}</b></span><span class="wk-items">${list}</span>`
@@ -1925,8 +1926,8 @@ function calDayHtml(k) {
   }
   const plans = plansOn(k);
   if (plans.length) {
-    h += `<p class="sec">EKİP PLANLARI</p><ul class="list">` + plans.map(p =>
-      `<li class="crow"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(p.owner_name)} · ${esc(p.team_name)}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col"><button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${(TEAMS || []).some(x => x.id === p.team_id && x.lider_mi) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
+    h += `<p class="sec">PAYLAŞILAN PLANLAR</p><ul class="list">` + plans.map(p =>
+      `<li class="crow"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col"><button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && (TEAMS || []).some(x => x.id === p.team_id && x.lider_mi) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
   }
   if (!dailyTasks.length && !dueTasks.length && !plans.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
   if (k === shift(t, -1) && s !== 'full' && s !== 'rest' && s !== 'none') h += `<button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`;
@@ -1970,29 +1971,38 @@ $('view-calendar').addEventListener('click', e => {
 
 // ---- ekiple paylaşma ----
 // Kişi kendi planladığı işi sonradan ekipleriyle paylaşır; paylaşılan iş ekip üyelerinin takviminde "ekip planı" olarak görünür.
-let SHARES = new Map(), PLANS = [];
+// SHARES: işin paylaşıldığı ekipler, FSHARES: işin paylaşıldığı arkadaşlar.
+// PLANS: başkalarının benimle paylaştığı planlar (kind: 'team' ekip planı, 'friend' arkadaşın ortak planı).
+let SHARES = new Map(), FSHARES = new Map(), PLANS = [];
+const isShared = t => !!((SHARES.get(t.id) || new Set()).size || (FSHARES.get(t.id) || new Set()).size);
+const toMap = (rows, key) => { const m = new Map(); for (const r of rows || []) { if (!m.has(r.task_id)) m.set(r.task_id, new Set()); m.get(r.task_id).add(r[key]); } return m; };
 async function loadShares() {
-  const [s, p] = await Promise.all([sb.rpc('paylasimlarim'), sb.rpc('ekip_planlari')]);
-  if (!s.error) {
-    SHARES = new Map();
-    for (const r of s.data || []) { if (!SHARES.has(r.task_id)) SHARES.set(r.task_id, new Set()); SHARES.get(r.task_id).add(r.team_id); }
-  }
-  if (!p.error) PLANS = p.data || [];
-  if (TEAMS === null && PLANS.length) loadTeams();
+  const [s, p, fs, fp] = await Promise.all([sb.rpc('paylasimlarim'), sb.rpc('ekip_planlari'), sb.rpc('arkadas_paylasimlarim'), sb.rpc('ortak_planlar')]);
+  if (!s.error) SHARES = toMap(s.data, 'team_id');
+  if (!fs.error) FSHARES = toMap(fs.data, 'friend_id');
+  const team = p.error ? PLANS.filter(x => x.kind === 'team') : (p.data || []).map(x => ({ ...x, kind: 'team' }));
+  const friend = fp.error ? PLANS.filter(x => x.kind === 'friend') : (fp.data || []).map(x => ({ ...x, kind: 'friend', benim: false }));
+  PLANS = team.concat(friend);
+  if (TEAMS === null && team.length) loadTeams();
   if (loaded) render();
 }
-// O güne düşen, başkalarının paylaştığı ekip planları
+// O güne düşen, başkalarının paylaştığı planlar
 function plansOn(k) {
   return PLANS.filter(p => !p.benim && (p.type === 'general' ? p.due === k : k >= today() && ((p.days || 127) & (1 << wdIndex(k)))));
 }
 const planTime = p => p.saat ? p.saat.slice(0, 5) + (p.bitis ? '–' + p.bitis.slice(0, 5) : '') : '';
-// Ekip seçme kutuları; görev penceresinde ve ayrı Paylaş penceresinde kullanılır
+const planFrom = p => p.kind === 'friend' ? `${p.owner_name} seninle paylaştı` : `${p.owner_name} · ${p.team_name}`;
+// Ekip ve arkadaş seçme kutuları; görev penceresinde ve ayrı Paylaş penceresinde kullanılır
 async function fillShareBox(t, box = $('fShare'), stillOpen = () => editId === t.id) {
-  if (!TEAMS) { box.innerHTML = '<p class="hint">Ekiplerin yükleniyor…</p>'; await loadTeams(); }
+  if (!TEAMS || FR === null) { box.innerHTML = '<p class="hint">Ekiplerin ve arkadaşların yükleniyor…</p>'; await Promise.all([TEAMS ? null : loadTeams(), ensureFriends()]); }
   if (!stillOpen()) return;
-  if (!TEAMS || !TEAMS.length) { box.innerHTML = '<p class="hint">Henüz bir ekibin yok. Arkadaşlar → Ekipler bölümünden ekip kurabilirsin.</p>'; return; }
-  const on = SHARES.get(t.id) || new Set();
-  box.innerHTML = `<div class="checks">` + TEAMS.map(tm => `<label class="check"><input type="checkbox" data-share="${tm.id}"${on.has(tm.id) ? ' checked' : ''}><span class="fn"><span class="t">${esc(tm.name)}</span><span class="sub">${tm.uye_sayisi} kişi</span></span></label>`).join('') + `</div>`;
+  const teams = TEAMS || [], friends = (FR || []).filter(f => f.status === 'accepted');
+  if (!teams.length && !friends.length) { box.innerHTML = '<p class="hint">Paylaşmak için önce Arkadaşlar sekmesinden bir arkadaş ekle ya da ekip kur.</p>'; return; }
+  const onT = SHARES.get(t.id) || new Set(), onF = FSHARES.get(t.id) || new Set();
+  let h = '';
+  if (friends.length) h += `<span class="eyebrow">ARKADAŞLAR</span><div class="checks">` + friends.map(f => `<label class="check"><input type="checkbox" data-fshare="${f.friend_id}"${onF.has(f.friend_id) ? ' checked' : ''}><span class="fn"><span class="t">${esc(f.lakap || f.full_name)}</span>${f.lakap ? `<span class="sub">${esc(f.full_name)}</span>` : ''}</span></label>`).join('') + `</div>`;
+  if (teams.length) h += `<span class="eyebrow">EKİPLER</span><div class="checks">` + teams.map(tm => `<label class="check"><input type="checkbox" data-share="${tm.id}"${onT.has(tm.id) ? ' checked' : ''}><span class="fn"><span class="t">${esc(tm.name)}</span><span class="sub">${tm.uye_sayisi} kişi</span></span></label>`).join('') + `</div>`;
+  box.innerHTML = `<div class="share-box">${h}</div>`;
 }
 const giveItem = (t, name) => ({ name: name || t.name, type: t.type, days: t.days, time: t.time, end: t.end, due: t.due, dur: t.dur });
 $('fGive').addEventListener('click', () => {
@@ -2021,25 +2031,29 @@ $('spSave').addEventListener('click', async () => {
 });
 // Kutulardaki seçim, düğmeye basılınca uygulanır: yeni işaretlenenler paylaşılır, işareti kaldırılanların paylaşımı kalkar.
 async function applyShares(id, box) {
-  const boxes = [...box.querySelectorAll('[data-share]')];
-  if (!boxes.length) return true;
-  const have = SHARES.get(id) || new Set();
-  const add = boxes.filter(b => b.checked && !have.has(b.dataset.share)).map(b => b.dataset.share);
-  const del = boxes.filter(b => !b.checked && have.has(b.dataset.share)).map(b => b.dataset.share);
-  if (!add.length && !del.length) return true;
+  const diff = (attr, have) => {
+    const bs = [...box.querySelectorAll(`[data-${attr}]`)], v = b => b.dataset[attr === 'share' ? 'share' : 'fshare'];
+    return { add: bs.filter(b => b.checked && !have.has(v(b))).map(v), del: bs.filter(b => !b.checked && have.has(v(b))).map(v) };
+  };
+  const tD = diff('share', SHARES.get(id) || new Set()), fD = diff('fshare', FSHARES.get(id) || new Set());
+  if (!tD.add.length && !tD.del.length && !fD.add.length && !fD.del.length) return true;
   // Yeni eklenen iş henüz sunucuya gitmediyse önce gönderilir
   if (!synced.tasks.has(id)) { clearTimeout(syncTimer); await sync(); }
   if (!synced.tasks.has(id)) { toast('İş henüz kaydedilmedi. Bağlantını kontrol edip tekrar dene.'); return false; }
-  const teamName = t => ((TEAMS || []).find(x => x.id === t) || {}).name || 'ekip';
-  const done = { add: [], del: [] };
-  let err = null;
-  for (const t of add) { const { error } = await sb.rpc('paylas', { p_task: id, p_team: t }); if (error) err = error; else done.add.push(t); }
-  for (const t of del) { const { error } = await sb.rpc('paylasimi_kaldir', { p_task: id, p_team: t }); if (error) err = error; else done.del.push(t); }
-  if (!SHARES.has(id)) SHARES.set(id, new Set());
-  done.add.forEach(t => SHARES.get(id).add(t)); done.del.forEach(t => SHARES.get(id).delete(t));
+  const teamName = t => `"${((TEAMS || []).find(x => x.id === t) || {}).name || 'ekip'}" ekibi`;
+  const friendName = f => { const x = (FR || []).find(y => y.friend_id === f); return x ? (x.lakap || x.full_name) : 'arkadaşın'; };
+  const added = [], removed = [];
+  let err = null, friendAdded = false;
+  const run = async (fn, args, list, label) => { const { error } = await sb.rpc(fn, args); if (error) err = error; else list.push(label); return !error; };
+  for (const t of tD.add) if (await run('paylas', { p_task: id, p_team: t }, added, teamName(t))) { if (!SHARES.has(id)) SHARES.set(id, new Set()); SHARES.get(id).add(t); }
+  for (const t of tD.del) if (await run('paylasimi_kaldir', { p_task: id, p_team: t }, removed, teamName(t))) (SHARES.get(id) || new Set()).delete(t);
+  for (const f of fD.add) if (await run('arkadasla_paylas', { p_task: id, p_friend: f }, added, friendName(f))) { if (!FSHARES.has(id)) FSHARES.set(id, new Set()); FSHARES.get(id).add(f); friendAdded = true; }
+  for (const f of fD.del) if (await run('arkadas_paylasimi_kaldir', { p_task: id, p_friend: f }, removed, friendName(f))) (FSHARES.get(id) || new Set()).delete(f);
+  // Arkadaşlara "seninle bir plan paylaştı" bildirimi
+  if (friendAdded) sb.functions.invoke('durt-bildir', { body: { plan_id: id } }).catch(() => {});
   if (err) toast(teamError(err));
-  else if (done.add.length && !done.del.length) toast(`${done.add.map(t => `"${teamName(t)}"`).join(', ')} ekibiyle paylaşıldı.`);
-  else if (done.del.length && !done.add.length) toast(`${done.del.map(t => `"${teamName(t)}"`).join(', ')} ekibiyle paylaşım kaldırıldı.`);
+  else if (added.length && !removed.length) toast(`${added.join(', ')} ile paylaşıldı.`);
+  else if (removed.length && !added.length) toast(`${removed.join(', ')} ile paylaşım kaldırıldı.`);
   else toast('Paylaşım güncellendi.');
   loadShares();
   return !err;

@@ -1,6 +1,7 @@
 // Dürtme bildirimi gönderir. Uygulama önce public.durt() ile kaydı açar, sonra bu fonksiyonu çağırır.
 // { anahtar: true } ile çağrılırsa bildirim aboneliği için gereken açık VAPID anahtarını döndürür.
 // { gorev_id } ile çağrılırsa ekip başkanının verdiği yeni görevi üyeye bildirir.
+// { plan_id } ile çağrılırsa arkadaşlarla yeni paylaşılan planı, henüz haber verilmemiş arkadaşlara bildirir.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 
@@ -58,6 +59,27 @@ Deno.serve(async (req) => {
     const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
     const { data: { user } } = await sb.auth.getUser(token);
     if (!user) return json({ error: 'giris_gerekli' }, 401);
+
+    if (body.plan_id) {
+      const { data: shares } = await sb.from('task_friend_shares').select('friend_id')
+        .eq('task_id', body.plan_id).eq('shared_by', user.id).is('notified_at', null);
+      if (!shares?.length) return json({ gonderildi: 0 });
+      await sb.from('task_friend_shares').update({ notified_at: new Date().toISOString() })
+        .eq('task_id', body.plan_id).eq('shared_by', user.id).is('notified_at', null);
+      const { data: plan } = await sb.from('tasks').select('name, due, time, end_time').eq('id', body.plan_id).single();
+      const { data: prof } = await sb.from('profiles').select('full_name').eq('id', user.id).single();
+      const zaman = [plan?.due, plan?.time ? String(plan.time).slice(0, 5) + (plan?.end_time ? '–' + String(plan.end_time).slice(0, 5) : '') : ''].filter(Boolean).join(' · ');
+      let n = 0;
+      for (const s of shares) {
+        const { data: nick } = await sb.from('nicknames').select('nickname').eq('owner', s.friend_id).eq('target', user.id).maybeSingle();
+        n += await gonder(s.friend_id, {
+          title: `${nick?.nickname || prof?.full_name || 'Bir arkadaşın'} seninle bir plan paylaştı`,
+          body: [plan?.name, zaman].filter(Boolean).join(' · '),
+          url: './', tag: `plan-${body.plan_id}`,
+        });
+      }
+      return json({ gonderildi: n });
+    }
 
     if (body.gorev_id) {
       const { data: gorev } = await sb.from('tasks').select('id, user_id, name, team_id, assigned_by')
