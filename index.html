@@ -137,6 +137,9 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .time-in{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:5px 6px;font:500 13px/18px var(--font-mono);color:var(--ink);min-width:0}
 .members{display:grid;gap:var(--space-3)}
 .crow-r{display:flex;align-items:center;gap:2px}
+.confirm-dlg{max-width:380px}
+.confirm-dlg .sheet{gap:var(--space-3)}
+.cf-text{margin:0;color:var(--ink-muted);font-size:15px;line-height:22px}
 button.cal-open{border:0;background:none;padding:2px 0;text-align:left;color:inherit;font:inherit;cursor:pointer}
 button.cal-open:hover .t{text-decoration:underline;text-underline-offset:3px}
 .x.share{display:grid;place-content:center;color:var(--ink-muted);padding:6px;border-radius:var(--radius-sm)}
@@ -512,6 +515,14 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
   </form>
 </dialog>
 
+<dialog id="confirmBox" class="confirm-dlg">
+  <div class="sheet" role="alertdialog" aria-labelledby="cfTitle" aria-describedby="cfText">
+    <h2 id="cfTitle"></h2>
+    <p class="cf-text" id="cfText"></p>
+    <div class="row-btns"><span class="grow"></span><button type="button" class="btn ghost" id="cfNo">Vazgeç</button><button type="button" class="btn danger armed" id="cfYes">Sil</button></div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -636,7 +647,7 @@ const noteIcon = '<svg class="ni" width="12" height="12" viewBox="0 0 12 12" fil
 const notePreview = t => { const n = (t.note || t.assignNote || '').split('\n')[0].trim(); return n ? `<span class="np">${noteIcon}${esc(n.length > 42 ? n.slice(0, 40) + '…' : n)}</span>` : ''; };
 const shareIcon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="3.5" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" stroke="currentColor" stroke-width="1.5"/></svg>';
 // Takvimde silme: ilk basışta 'Sil?' olur, ikinci basışta siler (ekip görevlerinde yok)
-const calDel = t => t.assigned ? '' : `<button class="x del${delArm === t.id ? ' armed' : ''}" type="button" data-caldel="${t.id}" aria-label="${esc(t.name)} işini sil" title="Sil">${delArm === t.id ? 'Sil?' : trashIcon}</button>`;
+const calDel = t => t.assigned ? '' : `<button class="x del" type="button" data-caldel="${t.id}" aria-label="${esc(t.name)} işini sil" title="Sil">${trashIcon}</button>`;
 const shareBtn = t => t.assigned ? '' : `<button class="x share${isShared(t) ? ' on' : ''}" type="button" data-sharetask="${t.id}" aria-label="${esc(t.name)} işini paylaş" title="Paylaş">${shareIcon}</button>`;
 // Ekip görevi: kim verdi, hangi ekipten
 const assignLabel = t => t.assigned ? [t.by ? `${t.by} verdi` : '', t.team].filter(Boolean).join(' · ') : '';
@@ -801,10 +812,10 @@ function render() {
 }
 
 // Listelerde Düzenle: her işin yanında sil düğmesi çıkar, ikinci basışta silinir.
-let listEdit = '', delArm = '';
+let listEdit = '';
 const trashIcon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const editHead = (title, list) => `<div class="sec-row"><p class="sec">${title}</p><button class="link" type="button" data-act="listEdit" data-list="${list}">${listEdit === list ? 'Bitti' : 'Düzenle'}</button></div>`;
-const delCtl = t => t.assigned ? '<span class="meta">ekip</span>' : `<button class="x del${delArm === t.id ? ' armed' : ''}" type="button" data-act="delTask" data-id="${t.id}" aria-label="${esc(t.name)} işini sil">${delArm === t.id ? 'Sil?' : trashIcon}</button>`;
+const delCtl = t => t.assigned ? '<span class="meta">ekip</span>' : `<button class="x del" type="button" data-act="delTask" data-id="${t.id}" aria-label="${esc(t.name)} işini sil">${trashIcon}</button>`;
 
 function renderDaily(r, cs) {
   const all = daily(), list = todayList();
@@ -1039,14 +1050,8 @@ function onAction(e) {
     case 'unfreezeT': setFrozen(today(), false); break;
     case 'samples': SAMPLES.forEach(([name, dur]) => S.tasks.push({ id: uid(), name, type: 'daily', dur, created: Date.now() })); break;
     case 'gtoggle': { const t = find(id); if (t) { t.done = !t.done; t.doneAt = t.done ? Date.now() : 0; } break; }
-    case 'listEdit': listEdit = listEdit === b.dataset.list ? '' : b.dataset.list; delArm = ''; break;
-    case 'delTask': {
-      const t = find(id); if (!t || t.assigned) break;
-      if (delArm !== id) { delArm = id; break; }
-      forgetToday(id); S.tasks = S.tasks.filter(x => x.id !== id); delArm = '';
-      toast(`"${t.name}" silindi.`);
-      break;
-    }
+    case 'listEdit': listEdit = listEdit === b.dataset.list ? '' : b.dataset.list; break;
+    case 'delTask': askDelete(id); return;
     case 'clearDone': S.tasks = S.tasks.filter(t => !(t.type === 'general' && t.done)); toast('Tamamlananlar temizlendi.'); break;
     case 'edit': openSheet(id); return;
     default: return;
@@ -1122,7 +1127,7 @@ function applyTheme() {
 }
 
 // ---- düzenleme sayfası ----
-let editId = null, editType = 'daily', delArmed = false, editDays = 127;
+let editId = null, editType = 'daily', editDays = 127;
 $('fNote').addEventListener('input', () => { const n = $('fNote').value.length; $('fNoteCount').textContent = n > 400 ? n + '/500' : ''; });
 $('fAllDay').addEventListener('change', () => {
   const on = $('fAllDay').checked;
@@ -1152,7 +1157,7 @@ function setType(type) {
 }
 function openSheet(id) {
   const t = find(id); if (!t) return;
-  editId = id; delArmed = false;
+  editId = id;
   editDays = t.days || 127; drawDays();
   $('fPoke').checked = !!t.pokeable;
   $('fNote').value = t.note || ''; $('fNoteCount').textContent = '';
@@ -1190,12 +1195,7 @@ function forgetToday(id) {
   r.done = r.done.filter(x => x !== id); r.skip = r.skip.filter(x => x !== id); delete r.at[id];
   if (S.timer && S.timer.id === id) S.timer = null;
 }
-$('delBtn').addEventListener('click', () => {
-  if (!delArmed) { delArmed = true; $('delBtn').textContent = 'Silmek için tekrar bas'; $('delBtn').classList.add('armed'); return; }
-  forgetToday(editId);
-  S.tasks = S.tasks.filter(t => t.id !== editId);
-  $('sheet').close(); render(); toast('Görev silindi.');
-});
+$('delBtn').addEventListener('click', () => askDelete(editId, () => $('sheet').close()));
 $('sheetForm').addEventListener('submit', e => {
   e.preventDefault();
   const t = find(editId); if (!t) return;
@@ -1963,13 +1963,9 @@ $('view-calendar').addEventListener('click', e => {
   if (ce) { openSheet(ce.dataset.caledit); return; }
   const cd = e.target.closest('[data-caldel]');
   if (cd) {
-    const id = cd.dataset.caldel, t = find(id); if (!t || t.assigned) return;
-    if (delArm !== id) { delArm = id; renderCalendar(); return; }
-    forgetToday(id); S.tasks = S.tasks.filter(x => x.id !== id); delArm = '';
-    render(); toast(`"${t.name}" silindi.`);
+    askDelete(cd.dataset.caldel);
     return;
   }
-  if (delArm && !e.target.closest('[data-caldel]')) delArm = '';
   const cp = e.target.closest('[data-copyplan]');
   if (cp) { copyPlan(cp.dataset.copyplan, calSel); return; }
   const c = e.target.closest('[data-cal]');
@@ -2136,6 +2132,33 @@ $('giveForm').addEventListener('submit', async e => {
   if (TEAM && $('teamSheet').open) loadTeamBody();
 });
 
+// ---- silme onayı ----
+// Ekranda onay penceresi açar; kullanıcı Sil derse true döner.
+function confirmBox(title, text, ok = 'Sil') {
+  return new Promise(resolve => {
+    const d = $('confirmBox');
+    $('cfTitle').textContent = title; $('cfText').textContent = text; $('cfYes').textContent = ok;
+    d.returnValue = '';
+    d.addEventListener('close', () => resolve(d.returnValue === 'evet'), { once: true });
+    d.showModal();
+    $('cfNo').focus();
+  });
+}
+$('cfYes').addEventListener('click', () => $('confirmBox').close('evet'));
+$('cfNo').addEventListener('click', () => $('confirmBox').close('hayir'));
+// İşi sor, onaylanırsa sil
+async function askDelete(id, after) {
+  const t = find(id); if (!t || t.assigned) return false;
+  const parts = [];
+  if (t.type === 'daily') parts.push(`Bu iş ${daysLabel(t.days).toLocaleLowerCase('tr')} tekrarlanıyor; silersen bütün günlerden kalkar. Geçmiş serin etkilenmez.`);
+  if (isShared(t)) parts.push('Paylaştığın kişilerin takviminden de kalkar.');
+  parts.push('Bu işlem geri alınamaz.');
+  if (!await confirmBox(`"${t.name}" silinsin mi?`, parts.join(' '))) return false;
+  forgetToday(id); S.tasks = S.tasks.filter(x => x.id !== id);
+  if (after) after();
+  render(); toast(`"${t.name}" silindi.`);
+  return true;
+}
 // ---- dünü düzeltme ----
 function openYesterday() {
   const y = shift(today(), -1), d = parseKey(y), rec = S.days[y];
