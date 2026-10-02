@@ -212,6 +212,8 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 /* bant */
 .banner{display:flex;gap:var(--space-3);align-items:flex-start;justify-content:space-between;background:var(--streak-soft);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);color:var(--ink)}
 .banner strong{color:var(--streak)}
+.banner.info{background:var(--accent-soft)}
+.banner.info strong{color:var(--ink)}
 
 /* ilerleme */
 .prog{display:grid;gap:6px}
@@ -398,6 +400,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
       <div class="acc-form">
         <p class="hint" id="notifState"></p>
         <button class="btn primary" type="button" id="notifBtn">Bu cihazda bildirimleri aç</button>
+        <button class="btn secondary" type="button" id="notifTest" hidden>Deneme bildirimi gönder</button>
         <label class="toggle" for="nMorning"><input type="checkbox" id="nMorning" data-pref="remind_morning"><span class="fn"><span class="t">Sabah hatırlatması</span><span class="sub">Bugünkü işlerin, şu saatte: <input class="time-in" type="time" data-pref-time="morning_time" aria-label="Sabah hatırlatma saati"></span></span></label>
         <label class="toggle" for="nEvening"><input type="checkbox" id="nEvening" data-pref="remind_evening"><span class="fn"><span class="t">Akşam hatırlatması</span><span class="sub">Yalnızca bitmemiş iş varsa, şu saatte: <input class="time-in" type="time" data-pref-time="evening_time" aria-label="Akşam hatırlatma saati"></span></span></label>
         <label class="toggle" for="nWeekly"><input type="checkbox" id="nWeekly" data-pref="weekly_summary"><span class="fn"><span class="t">Haftalık özet</span><span class="sub">Pazar 20:00'de haftanın özeti.</span></span></label>
@@ -802,7 +805,7 @@ function renderDaily(r, cs) {
   const all = daily(), list = todayList();
   const cur = currentTask(r);
   validTimer(cur);
-  let h = yesterdayBanner();
+  let h = notifBanner() + yesterdayBanner();
   if (!all.length) {
     h += `<div class="empty"><h2>Her gün yaptığın işleri ekle</h2><p>Sırayla yapacağın işleri aşağıdan gir. O günün bütün işlerini bitirdiğin her gün seriye bir çizgi eklenir; bir gün eksik kalırsa seri sıfırlanır.</p><button class="btn secondary" type="button" data-act="samples">Örnek görevlerle dene</button></div>`;
   } else {
@@ -1020,6 +1023,8 @@ function onAction(e) {
     case 'reset': S.timer = null; break;
     case 'dismiss': S.dismissed = today(); break;
     case 'fixY': openYesterday(); return;
+    case 'enableNotif': enablePush().catch(err => toast(hataMesaji(err))).finally(updateNotifUi); return;
+    case 'notifLater': S.notifLater = today(); break;
     case 'freezeY':
       if (freezesLeft(shift(today(), -1)) > 0) { setFrozen(shift(today(), -1), true); toast(`Dün izin günü sayıldı. Serin ${currentStreak()} gün.`); }
       break;
@@ -1451,14 +1456,57 @@ async function updateNotifUi() {
   }
   if (Notification.permission === 'denied') {
     st.textContent = 'Bildirim izni tarayıcı ayarlarından kapatılmış. Site ayarlarından bildirimlere izin verip sayfayı yenile.';
-    btn.hidden = true; return;
+    btn.hidden = true; $('notifTest').hidden = true;
+    if (hasSub !== false) { hasSub = false; if (loaded) render(); }
+    return;
   }
   const sub = await currentSub();
+  // Sunucuda kayıt yoksa (ör. başka hesaptan açılmışsa) abonelik yeniden kaydedilir
+  if (sub && !subSaved) { const j = sub.toJSON(); const { error } = await sb.rpc('abone_ol', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth }); subSaved = !error; }
+  const was = hasSub; hasSub = !!sub;
+  if (was !== hasSub && loaded) render();
   btn.hidden = false;
+  $('notifTest').hidden = !sub;
   st.textContent = sub ? 'Bu cihazda bildirimler açık.' : 'Bu cihaza henüz bildirim gelmiyor.';
   btn.textContent = sub ? 'Bu cihazda bildirimleri kapat' : 'Bu cihazda bildirimleri aç';
   btn.className = sub ? 'btn secondary' : 'btn primary';
 }
+let hasSub = null, subSaved = false;
+// Bildirim izni ister, cihazı abone eder ve aboneliği sunucuya kaydeder
+async function enablePush() {
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { toast(perm === 'denied' ? 'Bildirim izni reddedildi. Tarayıcının site ayarlarından izin verebilirsin.' : 'Bildirim izni verilmedi.'); return false; }
+  if (!vapidKey) {
+    const { data, error } = await sb.functions.invoke('durt-bildir', { body: { anahtar: true } });
+    if (error || !data || !data.publicKey) throw error || new Error('Bildirim anahtarı alınamadı.');
+    vapidKey = data.publicKey;
+  }
+  const reg = swReg || await navigator.serviceWorker.ready;
+  const s = (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(vapidKey) })).toJSON();
+  const { error } = await sb.rpc('abone_ol', { p_endpoint: s.endpoint, p_p256dh: s.keys.p256dh, p_auth: s.keys.auth });
+  if (error) throw error;
+  subSaved = true;
+  reg.showNotification('Günlük Rutin', { body: 'Bildirimler bu cihazda açıldı.', icon: 'ikon-192.png', badge: 'ikon-rozet.png', tag: 'deneme' });
+  toast('Bildirimler açıldı.');
+  return true;
+}
+// Ana ekrandaki "bildirimleri aç" kartı
+function notifBanner() {
+  if (!pushOk || hasSub !== false || S.notifLater === today()) return '';
+  if (Notification.permission === 'denied') {
+    return `<div class="banner info" role="status"><div class="banner-body"><div><strong>Bildirim izni kapalı.</strong> Tarayıcının menüsünden bu sitenin ayarlarına gir, Bildirimler'e izin ver ve sayfayı yenile.</div>`
+      + `<div class="banner-acts"><button class="btn ghost sm" type="button" data-act="notifLater">Sonra</button></div></div></div>`;
+  }
+  return `<div class="banner info" role="status"><div class="banner-body"><div><strong>Bildirimler kapalı.</strong> Hatırlatmalar, dürtmeler ve ekip görevleri sana bildirim olarak gelsin mi?</div>`
+    + `<div class="banner-acts"><button class="btn primary sm" type="button" data-act="enableNotif">Bildirimleri aç</button><button class="btn ghost sm" type="button" data-act="notifLater">Sonra</button></div></div></div>`;
+}
+$('notifTest').addEventListener('click', async () => {
+  try {
+    const reg = swReg || await navigator.serviceWorker.ready;
+    await reg.showNotification('Günlük Rutin', { body: 'Deneme bildirimi: bu cihaza bildirim geliyor.', icon: 'ikon-192.png', badge: 'ikon-rozet.png', tag: 'deneme' });
+    toast('Deneme bildirimi gönderildi.');
+  } catch (err) { toast(hataMesaji(err)); }
+});
 $('notifBtn').addEventListener('click', async () => {
   const btn = $('notifBtn'); btn.disabled = true;
   try {
@@ -1466,20 +1514,10 @@ $('notifBtn').addEventListener('click', async () => {
     if (sub) {
       await sb.rpc('abonelik_sil', { p_endpoint: sub.endpoint });
       await sub.unsubscribe();
+      subSaved = false;
       toast('Bu cihazda bildirimler kapandı.');
     } else {
-      const perm = await Notification.requestPermission();
-      if (perm !== 'granted') { toast('Bildirim izni verilmedi.'); return; }
-      if (!vapidKey) {
-        const { data, error } = await sb.functions.invoke('durt-bildir', { body: { anahtar: true } });
-        if (error || !data || !data.publicKey) throw error || new Error('Bildirim anahtarı alınamadı.');
-        vapidKey = data.publicKey;
-      }
-      const reg = swReg || await navigator.serviceWorker.ready;
-      const s = (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(vapidKey) })).toJSON();
-      const { error } = await sb.rpc('abone_ol', { p_endpoint: s.endpoint, p_p256dh: s.keys.p256dh, p_auth: s.keys.auth });
-      if (error) throw error;
-      toast('Bildirimler açıldı.');
+      await enablePush();
     }
   } catch (err) {
     toast(hataMesaji(err));
@@ -2200,7 +2238,7 @@ async function reloadFromServer(first) {
   if (p.error || t.error || d.error) return p.error || t.error || d.error;
   PROFILE = p.data;
   fillAccount();
-  const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed };
+  const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed, notifLater: S.notifLater };
   S = Object.assign(blank(), ui);
   S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '', note: r.note || '', assignNote: r.assign_note || '' }));
   for (const x of (v.error ? [] : v.data || [])) { const k = S.tasks.find(y => y.id === x.task_id); if (k) { k.by = x.veren || ''; if (x.ekip) k.team = x.ekip; } }
