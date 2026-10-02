@@ -1,4 +1,4 @@
-// Sabah, akşam ve haftalık hatırlatmaları gönderir. Yalnızca pg_cron çağırır;
+// Sabah, akşam, görev saati ve haftalık hatırlatmaları gönderir. pg_cron 5 dakikada bir çağırır;
 // çağrı, veritabanındaki gizli 'cron' anahtarını x-cron başlığında taşımalıdır.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
@@ -44,13 +44,13 @@ Deno.serve(async (req) => {
   const { data: gizli } = await sb.rpc('ayar_oku', { p_ad: 'cron' });
   if (!gizli || req.headers.get('x-cron') !== gizli) return json({ error: 'yetki_yok' }, 401);
   const { tur } = await req.json().catch(() => ({ tur: '' }));
-  if (!['sabah', 'aksam', 'haftalik'].includes(tur)) return json({ error: 'tur_gecersiz' }, 400);
+  if (tur !== 'zaman') return json({ error: 'tur_gecersiz' }, 400);
   await vapid();
   const { data: rows, error } = await sb.rpc('hatirlatma_listesi', { p_tur: tur });
   if (error) return json({ error: error.message }, 500);
   let n = 0;
   for (const r of rows ?? []) {
-    n += await gonder(r.user_id, { title: r.baslik, body: r.govde, url: './', tag: `hatirlat-${tur}` });
+    n += await gonder(r.user_id, { title: r.baslik, body: r.govde, url: './', tag: `hatirlat-${r.etiket}` });
   }
   return json({ kisi: rows?.length ?? 0, bildirim: n });
 });

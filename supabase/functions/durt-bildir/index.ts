@@ -1,5 +1,6 @@
 // Dürtme bildirimi gönderir. Uygulama önce public.durt() ile kaydı açar, sonra bu fonksiyonu çağırır.
 // { anahtar: true } ile çağrılırsa bildirim aboneliği için gereken açık VAPID anahtarını döndürür.
+// { gorev_id } ile çağrılırsa ekip başkanının verdiği yeni görevi üyeye bildirir.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 
@@ -57,6 +58,23 @@ Deno.serve(async (req) => {
     const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
     const { data: { user } } = await sb.auth.getUser(token);
     if (!user) return json({ error: 'giris_gerekli' }, 401);
+
+    if (body.gorev_id) {
+      const { data: gorev } = await sb.from('tasks').select('id, user_id, name, team_id, assigned_by')
+        .eq('id', body.gorev_id).eq('assigned_by', user.id).is('notified_at', null).maybeSingle();
+      if (!gorev) return json({ error: 'gorev_yok' }, 404);
+      await sb.from('tasks').update({ notified_at: new Date().toISOString() }).eq('id', gorev.id);
+      const [{ data: ekip }, { data: lider }] = await Promise.all([
+        sb.from('teams').select('name').eq('id', gorev.team_id).single(),
+        sb.from('profiles').select('full_name').eq('id', user.id).single(),
+      ]);
+      const n = await gonder(gorev.user_id, {
+        title: `Yeni görev: ${gorev.name}`,
+        body: [ekip?.name, lider?.full_name].filter(Boolean).join(' · '),
+        url: './', tag: `gorev-${gorev.id}`,
+      });
+      return json({ gonderildi: n });
+    }
 
     const { data: poke } = await sb.from('pokes').select('*')
       .eq('id', body.poke_id).eq('sender', user.id).is('pushed_at', null).maybeSingle();

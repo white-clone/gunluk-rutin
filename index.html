@@ -54,6 +54,35 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .code-in{text-transform:uppercase;font-family:var(--font-mono);letter-spacing:.12em}
 .code-in::placeholder{text-transform:none;font-family:var(--font-sans);letter-spacing:0}
 .code>div{display:grid;gap:2px}
+.hint{margin:0;font-size:13px;line-height:18px;color:var(--ink-muted)}
+.seg2{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
+.seg2 button{border:0;background:none;padding:10px 0;font-weight:600;color:var(--ink-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.seg2 button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.add-wrap{display:grid;gap:6px}
+.add-opts{display:flex;gap:var(--space-2);align-items:center}
+.add-opts .days{flex:1;min-width:0}
+.days.sm button{padding:7px 0;font-size:12px}
+.time-in{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:5px 6px;font:500 13px/18px var(--font-mono);color:var(--ink);min-width:0}
+.members{display:grid;gap:var(--space-3)}
+.member{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:var(--space-3)}
+.member .frow{padding:0}
+.tag{display:inline-block;font:600 11px/16px var(--font-sans);letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);border-radius:var(--radius-pill);padding:0 8px;margin-left:4px;vertical-align:1px}
+.list.tlist{padding-left:48px}
+.tlist .prow{min-height:36px;padding:4px 0}
+.tlist .t{font-weight:500}
+.prow-r{display:flex;align-items:center;gap:var(--space-2)}
+.meta.okk{color:var(--done);font-weight:600}
+.x{border:0;background:none;color:var(--ink-muted);font-size:18px;line-height:1;padding:4px 6px;border-radius:var(--radius-sm)}
+.x.armed{font-size:12px;font-weight:600;color:var(--on-accent);background:var(--streak)}
+.btn.armed{background:var(--streak);color:var(--on-accent);border-color:var(--streak)}
+.member .link{justify-self:start;padding-left:48px}
+.assign{display:grid;gap:var(--space-2);margin-left:48px;padding:var(--space-3);background:var(--bg);border-radius:var(--radius-md)}
+.assign input[name=ad]{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-md);padding:9px 12px;min-width:0}
+.assign .seg button{font-size:13px}
+.assign-row{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.mini{display:grid;gap:2px;font:600 11px/16px var(--font-sans);letter-spacing:.04em;color:var(--ink-muted);flex:1;min-width:110px}
+.mini input{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:7px 8px;font:500 14px/20px var(--font-sans);color:var(--ink);min-width:0}
+.assign .btn{justify-self:start}
 .poke{display:grid;gap:var(--space-2);border-top:1px solid var(--line);padding-top:var(--space-3)}
 .prow{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);padding:6px 0;min-height:44px}
 .prow .t{font-weight:600;overflow-wrap:anywhere;min-width:0}
@@ -235,11 +264,13 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
   <form class="sheet" id="sheetForm" method="dialog">
     <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <h2 id="sheetTitle">Görevi düzenle</h2>
+    <p class="hint" id="fLock" hidden></p>
     <div class="field"><label for="fName">AD</label><input id="fName" maxlength="80" required></div>
     <div class="field"><span class="lbl">TÜR</span>
       <div class="seg"><button type="button" data-type="daily" id="segDaily">Günlük</button><button type="button" data-type="general" id="segGeneral">Genel</button></div>
     </div>
     <div class="field" id="fDurWrap"><label for="fDur">SÜRE (DAKİKA, İSTEĞE BAĞLI)</label><input id="fDur" type="number" min="0" max="600" inputmode="numeric"></div>
+    <div class="field" id="fTimeWrap"><label for="fTime">SAAT (İSTEĞE BAĞLI)</label><input id="fTime" type="time"><span class="hint">Saati olan işler sırada saate göre yer alır; bildirimler açıksa o saatte hatırlatılır.</span></div>
     <div class="field" id="fDaysWrap"><span class="lbl">GÜNLER</span><div class="days" id="fDays"></div><span class="hint" id="fDaysHint"></span></div>
     <label class="toggle" for="fPoke" id="fPokeWrap"><input type="checkbox" id="fPoke"><span class="fn"><span class="t">Arkadaşlarım bu iş için beni dürtebilsin</span><span class="sub">İşin adı arkadaşlarına görünür; bitirmediysen sana bildirim gönderebilirler.</span></span></label>
     <div class="field" id="fDueWrap"><label for="fDue">SON TARİH (İSTEĞE BAĞLI)</label><input id="fDue" type="date"></div>
@@ -269,15 +300,17 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
       <div class="acc-form">
         <p class="hint" id="notifState"></p>
         <button class="btn primary" type="button" id="notifBtn">Bu cihazda bildirimleri aç</button>
-        <label class="toggle" for="nMorning"><input type="checkbox" id="nMorning" data-pref="remind_morning"><span class="fn"><span class="t">Sabah hatırlatması</span><span class="sub">09:00'da bugünkü işlerin.</span></span></label>
-        <label class="toggle" for="nEvening"><input type="checkbox" id="nEvening" data-pref="remind_evening"><span class="fn"><span class="t">Akşam hatırlatması</span><span class="sub">21:00'de, yalnızca bitmemiş iş varsa.</span></span></label>
+        <label class="toggle" for="nMorning"><input type="checkbox" id="nMorning" data-pref="remind_morning"><span class="fn"><span class="t">Sabah hatırlatması</span><span class="sub">Bugünkü işlerin, şu saatte: <input class="time-in" type="time" data-pref-time="morning_time" aria-label="Sabah hatırlatma saati"></span></span></label>
+        <label class="toggle" for="nEvening"><input type="checkbox" id="nEvening" data-pref="remind_evening"><span class="fn"><span class="t">Akşam hatırlatması</span><span class="sub">Yalnızca bitmemiş iş varsa, şu saatte: <input class="time-in" type="time" data-pref-time="evening_time" aria-label="Akşam hatırlatma saati"></span></span></label>
         <label class="toggle" for="nWeekly"><input type="checkbox" id="nWeekly" data-pref="weekly_summary"><span class="fn"><span class="t">Haftalık özet</span><span class="sub">Pazar 20:00'de haftanın özeti.</span></span></label>
+        <label class="toggle" for="nTasks"><input type="checkbox" id="nTasks" data-pref="remind_tasks"><span class="fn"><span class="t">Görev saatinde hatırlat</span><span class="sub">Saati olan iş o saatte bitmemişse bildirim gelir.</span></span></label>
         <label class="toggle" for="nPoke"><input type="checkbox" id="nPoke" data-pref="allow_poke"><span class="fn"><span class="t">Arkadaşlarım beni dürtebilsin</span><span class="sub">23:00–08:00 arası dürtme gelmez.</span></span></label>
       </div>
     </details>
     <details class="acc-sec">
       <summary>ŞİFREYİ DEĞİŞTİR</summary>
       <form class="acc-form" id="pwForm" novalidate>
+        <div class="field"><label for="pwOld">MEVCUT ŞİFRE</label><div class="pw"><input id="pwOld" type="password" autocomplete="current-password"><button type="button" data-show="pwOld">Göster</button></div></div>
         <div class="field"><label for="pwNew">YENİ ŞİFRE</label><div class="pw"><input id="pwNew" type="password" autocomplete="new-password" minlength="8"><button type="button" data-show="pwNew">Göster</button></div><span class="hint">En az 8 karakter.</span></div>
         <div class="field"><label for="pwNew2">YENİ ŞİFRE TEKRAR</label><input id="pwNew2" type="password" autocomplete="new-password"></div>
         <div class="msg" id="pwMsg" role="alert" hidden></div>
@@ -311,6 +344,20 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
       <button type="submit" class="btn primary">Kaydet</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="teamSheet">
+  <div class="sheet">
+    <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
+    <div><h2 id="tmName"></h2><p class="hint" id="tmSub"></p></div>
+    <div class="code" id="tmCodeBox"><div><span class="eyebrow">EKİP KODU</span><b id="tmCode"></b></div><button class="btn secondary sm" type="button" id="tmCopy">Kopyala</button></div>
+    <div class="members" id="tmBody"></div>
+    <div class="row-btns">
+      <button type="button" class="btn danger" id="tmLeave">Ekipten ayrıl</button>
+      <span class="grow"></span>
+      <button type="button" class="btn ghost" data-close>Kapat</button>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="friendSheet">
@@ -355,7 +402,7 @@ const fmt = sec => `${pad(Math.floor(sec / 60))}:${pad(sec % 60)}`;
 // S: ekranın durumu. Görevler, günler ve en uzun seri Supabase'e eşitlenir;
 // tema, sekme ve sayaç yalnızca bu tarayıcıda tutulur.
 let USER = null, PROFILE = null;
-const blank = () => ({ tasks: [], days: {}, theme: 'system', best: 0, timer: null, dismissed: '', tab: 'daily' });
+const blank = () => ({ tasks: [], days: {}, theme: 'system', best: 0, timer: null, dismissed: '', tab: 'daily', ftab: 'friends' });
 let S = blank();
 try { S.theme = (JSON.parse(localStorage.getItem(UI_KEY)) || {}).theme || 'system'; } catch (e) {}
 const cacheKey = () => 'gunluk-rutin-cache-' + USER.id;
@@ -374,7 +421,7 @@ function save() {
 // ---- eşitleme ----
 // Son eşitlenen hâl satır satır tutulur; yalnızca değişen satırlar gönderilir.
 const synced = { tasks: new Map(), days: new Map(), prof: '' };
-const taskRow = (t, i) => ({ id: t.id, user_id: USER.id, name: t.name, type: t.type, dur: t.type === 'daily' ? (t.dur || 0) : 0, days: t.type === 'daily' ? (t.days || 127) : 127, pokeable: t.type === 'daily' && !!t.pokeable, due: t.type === 'general' && t.due ? t.due : null, done: t.type === 'general' && !!t.done, done_at: t.type === 'general' && t.doneAt ? new Date(t.doneAt).toISOString() : null, position: i });
+const taskRow = (t, i) => ({ id: t.id, user_id: USER.id, name: t.name, type: t.type, dur: t.type === 'daily' ? (t.dur || 0) : 0, days: t.type === 'daily' ? (t.days || 127) : 127, pokeable: t.type === 'daily' && !!t.pokeable, time: t.type === 'daily' && t.time ? t.time : null, due: t.type === 'general' && t.due ? t.due : null, done: t.type === 'general' && !!t.done, done_at: t.type === 'general' && t.doneAt ? new Date(t.doneAt).toISOString() : null, position: i });
 const dayRow = (k, r) => ({ user_id: USER.id, day: k, done: r.done, skip: r.skip, at: r.at || {}, total: r.total || 0, frozen: !!r.frozen });
 // Profildeki özet: en uzun seri ve arkadaşların gördüğü bugünkü ilerleme
 const profRow = () => {
@@ -447,7 +494,9 @@ const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 const wdIndex = k => (parseKey(k).getDay() + 6) % 7;
 const activeOn = (t, k) => t.type === 'daily' && !!((t.days || 127) & (1 << wdIndex(k)));
 const createdKey = t => t.created ? keyOf(new Date(t.created)) : '0000-00-00';
-const todayList = () => daily().filter(t => activeOn(t, today()));
+// Saati olan işler sırada saate göre yer alır; saati olmayanlar kendi sırasını korur.
+const byTime = (a, b) => (a.time || '99:99').localeCompare(b.time || '99:99');
+const todayList = () => daily().filter(t => activeOn(t, today())).sort(byTime);
 // O gün beklenen işler; o güne ait kayıt yoksa bugünkü görevlerden çıkarılır.
 const expectedOn = k => daily().filter(t => activeOn(t, k) && createdKey(t) <= k);
 function daysLabel(mask) {
@@ -622,13 +671,14 @@ function renderDaily(r, cs) {
       list.forEach((t, i) => {
         const isDone = r.done.includes(t.id), isSkip = r.skip.includes(t.id), isNow = cur && cur.id === t.id;
         const cls = isDone ? 'done' : isSkip ? 'skip' : isNow ? 'now' : 'next';
-        const meta = isDone ? (r.at[t.id] || 'bitti') : isSkip ? 'atlandı' : isNow ? 'şimdi' : (t.dur ? `${t.dur} dk` : '');
+        const meta = isDone ? (r.at[t.id] || 'bitti') : isSkip ? 'atlandı' : isNow ? [t.time, 'şimdi'].filter(Boolean).join(' · ') : [t.time, t.dur ? `${t.dur} dk` : ''].filter(Boolean).join(' · ');
+        const late = !isDone && !isSkip && t.time && t.time < nowHM();
         const ts = taskStreak(t.id);
-        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : ''].filter(Boolean).join('');
+        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', t.team ? `<span>Ekip: ${esc(t.team)}</span>` : ''].filter(Boolean).join('');
         const label = isDone ? `${t.name}: tamamlandı, geri al` : `${t.name}: tamamlandı olarak işaretle`;
         h += `<li class="row ${cls}"><button class="mark" type="button" data-act="toggle" data-id="${t.id}" aria-label="${esc(label)}">${isDone ? check : isSkip ? '' : i + 1}</button>`
           + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${sub ? `<span class="sub">${sub}</span>` : ''}</button>`
-          + `<span class="meta">${meta}</span></li>`;
+          + `<span class="meta${late ? ' late' : ''}">${meta}</span></li>`;
       });
       h += `</ol>`;
     }
@@ -638,7 +688,8 @@ function renderDaily(r, cs) {
         `<li class="row off"><span class="mark" aria-hidden="true"></span><button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span><span class="sub">${daysLabel(t.days)}</span></button><span class="meta"></span></li>`).join('') + `</ol>`;
     }
   }
-  h += `<form class="add" data-form="daily"><input class="name" id="dName" placeholder="Günlük iş ekle" maxlength="80" aria-label="Günlük iş adı" required><input class="dur" id="dDur" type="number" min="0" max="600" inputmode="numeric" placeholder="süre" aria-label="Süre, dakika"><span class="unit">dk</span><button class="btn primary" type="submit">Ekle</button></form>`;
+  h += `<form class="add-wrap" data-form="daily"><div class="add"><input class="name" id="dName" placeholder="Günlük iş ekle" maxlength="80" aria-label="Günlük iş adı" required><input class="dur" id="dDur" type="number" min="0" max="600" inputmode="numeric" placeholder="süre" aria-label="Süre, dakika"><span class="unit">dk</span><button class="btn primary" type="submit">Ekle</button></div>`
+    + `<div class="add-opts"><div class="days sm" role="group" aria-label="Hangi günler">${DAY_NAMES.map((n, i) => `<button type="button" data-adday="${i}" aria-pressed="${!!(addDays & (1 << i))}">${n}</button>`).join('')}</div><input class="time-in" id="dTime" type="time" value="${addTime}" aria-label="Saat, isteğe bağlı"></div></form>`;
   if (all.length) h += streakHtml(cs, list);
   const view = $('view-daily');
   const keep = document.activeElement && document.activeElement.id === 'dName';
@@ -695,7 +746,7 @@ function cardHtml(r, cur, list, cs) {
       : running ? `<button class="btn outline" type="button" data-act="pause">Duraklat</button>`
       : `<button class="btn outline" type="button" data-act="start">${S.timer ? 'Devam' : 'Başla'}</button>`;
   }
-  return `<div class="card"><div class="lab">ŞİMDİ · ADIM ${idx} / ${list.length}</div><h2 class="nm">${esc(cur.name)}</h2>${ring}`
+  return `<div class="card"><div class="lab">ŞİMDİ${cur.time ? ' · ' + cur.time : ''} · ADIM ${idx} / ${list.length}</div><h2 class="nm">${esc(cur.name)}</h2>${ring}`
     + `<div class="acts">${timerBtn}<button class="btn done" type="button" data-act="done" data-id="${cur.id}">Bitti</button><button class="btn ghost" type="button" data-act="skip" data-id="${cur.id}">Atla</button></div>`
     + (nxt ? `<p class="next">Sıradaki: ${esc(nxt.name)}${nxt.dur ? ` · ${nxt.dur} dk` : ''}</p>` : '<p class="next">Bu son adım.</p>')
     + `</div>`;
@@ -839,15 +890,27 @@ function onAction(e) {
 }
 $('view-daily').addEventListener('click', onAction);
 $('view-general').addEventListener('click', onAction);
+// Günlük iş ekleme: hangi günler ve saat (form yeniden çizilse de seçim korunur)
+let addDays = 127, addTime = '';
+$('view-daily').addEventListener('click', e => {
+  const b = e.target.closest('[data-adday]'); if (!b) return;
+  const next = addDays ^ (1 << +b.dataset.adday);
+  if (!next) { toast('En az bir gün seçili olmalı.'); return; }
+  addDays = next;
+  b.setAttribute('aria-pressed', String(!!(addDays & (1 << +b.dataset.adday))));
+});
+$('view-daily').addEventListener('input', e => { if (e.target.id === 'dTime') addTime = e.target.value; });
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-form]'); if (!f) return;
   if (!loaded) { e.preventDefault(); return; }
   if (f.dataset.form === 'friend') { e.preventDefault(); addFriend(f); return; }
+  if (f.dataset.form.startsWith('team-')) { e.preventDefault(); teamSubmit(f); return; }
   e.preventDefault();
   if (f.dataset.form === 'daily') {
     const name = $('dName').value.trim(); if (!name) return;
     const dur = Math.max(0, Math.min(600, parseInt($('dDur').value, 10) || 0));
-    S.tasks.push({ id: uid(), name, type: 'daily', dur, days: 127, created: Date.now() });
+    S.tasks.push({ id: uid(), name, type: 'daily', dur, days: addDays, time: addTime, created: Date.now() });
+    addDays = 127; addTime = '';
     $('dName').value = '';
   } else {
     const name = $('gName').value.trim(); if (!name) return;
@@ -860,7 +923,7 @@ document.addEventListener('submit', e => {
 document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b || !loaded) return;
   S.tab = b.dataset.tab; render();
-  if (S.tab === 'friends') loadFriends();
+  if (S.tab === 'friends') { loadFriends(); if (S.ftab === 'teams') loadTeams(); }
 });
 $('themeBtn').addEventListener('click', () => {
   S.theme = { system: 'light', light: 'dark', dark: 'system' }[S.theme];
@@ -891,6 +954,7 @@ function setType(type) {
   $('fDurWrap').hidden = type !== 'daily';
   $('fDaysWrap').hidden = type !== 'daily';
   $('fPokeWrap').hidden = type !== 'daily';
+  $('fTimeWrap').hidden = type !== 'daily';
   $('fDueWrap').hidden = type !== 'general';
   $('moveBtns').hidden = type !== 'daily' || find(editId).type !== 'daily';
 }
@@ -899,6 +963,11 @@ function openSheet(id) {
   editId = id; delArmed = false;
   editDays = t.days || 127; drawDays();
   $('fPoke').checked = !!t.pokeable;
+  $('fTime').value = t.time || '';
+  const locked = !!t.assigned;
+  $('fName').disabled = locked; $('segDaily').disabled = locked; $('segGeneral').disabled = locked; $('delBtn').hidden = locked;
+  $('fLock').hidden = !locked;
+  $('fLock').textContent = locked ? `Bu görevi "${t.team}" ekibinin başkanı verdi. Adını değiştiremez ve silemezsin; günlerini ve saatini ayarlayabilirsin.` : '';
   $('fName').value = t.name;
   $('fDur').value = t.dur || '';
   $('fDue').value = t.due || '';
@@ -939,7 +1008,7 @@ $('sheetForm').addEventListener('submit', e => {
     S.tasks = S.tasks.filter(x => x !== t); S.tasks.push(t);
   }
   t.name = name; t.type = editType;
-  if (editType === 'daily') { t.dur = Math.max(0, Math.min(600, parseInt($('fDur').value, 10) || 0)); t.days = editDays; t.pokeable = $('fPoke').checked; delete t.due; delete t.done; }
+  if (editType === 'daily') { t.dur = Math.max(0, Math.min(600, parseInt($('fDur').value, 10) || 0)); t.days = editDays; t.pokeable = $('fPoke').checked; t.time = $('fTime').value || ''; delete t.due; delete t.done; }
   else { t.due = $('fDue').value || ''; t.done = !!t.done; }
   $('sheet').close(); render();
 });
@@ -970,7 +1039,9 @@ function renderFriends() {
   const friends = list.filter(f => f.status === 'accepted');
   $('cntFriends').textContent = incoming.length || '';
   if (!PROFILE) { view.innerHTML = ''; return; }
-  let h = `<div class="code"><div><span class="eyebrow">ARKADAŞ KODUN</span><b>${esc(PROFILE.friend_code)}</b></div><button class="btn secondary sm" type="button" data-fact="copy">Kopyala</button></div>`;
+  const seg = `<div class="seg2" role="tablist"><button type="button" role="tab" data-ftab="friends" aria-selected="${S.ftab !== 'teams'}">Arkadaşlar</button><button type="button" role="tab" data-ftab="teams" aria-selected="${S.ftab === 'teams'}">Ekipler</button></div>`;
+  if (S.ftab === 'teams') { fillView(view, seg + teamsHtml(), ['tName', 'tCode']); return; }
+  let h = seg + `<div class="code"><div><span class="eyebrow">ARKADAŞ KODUN</span><b>${esc(PROFILE.friend_code)}</b></div><button class="btn secondary sm" type="button" data-fact="copy">Kopyala</button></div>`;
   h += `<form class="add" data-form="friend"><input class="name code-in" id="fCode" placeholder="Arkadaşının kodunu gir" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Arkadaş kodu" required><button class="btn primary" type="submit">Ekle</button></form>`;
   if (frError) h += `<div class="msg err" role="alert">${esc(frError)}</div>`;
   if (POKES.length) {
@@ -995,11 +1066,15 @@ function renderFriends() {
       `<li class="frow"><span class="av" aria-hidden="true">${esc(initials(f.full_name))}</span><span class="fn"><span class="t">${esc(f.full_name)}</span><span class="sub">yanıt bekleniyor</span></span>`
       + `<span class="fbtns"><button class="btn ghost sm" type="button" data-fact="cancel" data-id="${f.id}">Geri al</button></span></li>`).join('') + `</ul>`;
   }
-  const keep = document.activeElement && document.activeElement.id === 'fCode';
-  const draft = $('fCode') ? $('fCode').value : '';
+  fillView(view, h, ['fCode']);
+}
+// Görünümü yeniden çizerken yazılmakta olan alanları korur
+function fillView(view, h, ids) {
+  const active = document.activeElement && document.activeElement.id;
+  const drafts = ids.map(id => ($(id) ? $(id).value : ''));
   view.innerHTML = `<div style="display:grid;gap:var(--space-4)">${h}</div>`;
-  if (draft) $('fCode').value = draft;
-  if (keep) $('fCode').focus();
+  ids.forEach((id, i) => { if (drafts[i] && $(id)) $(id).value = drafts[i]; });
+  if (ids.includes(active) && $(active)) $(active).focus();
 }
 function progressText(f) {
   if (f.status !== 'accepted') return '';
@@ -1032,6 +1107,10 @@ async function addFriend(form) {
   loadFriends();
 }
 $('view-friends').addEventListener('click', e => {
+  const ft = e.target.closest('[data-ftab]');
+  if (ft) { S.ftab = ft.dataset.ftab; render(); if (S.ftab === 'teams') loadTeams(); return; }
+  const tb = e.target.closest('[data-team]');
+  if (tb) { openTeam(tb.dataset.team); return; }
   const b = e.target.closest('[data-fact]'); if (!b) return;
   const id = b.dataset.id;
   switch (b.dataset.fact) {
@@ -1119,15 +1198,20 @@ $('shareIn').addEventListener('change', async () => {
 });
 $('pwForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const pw = $('pwNew').value, pw2 = $('pwNew2').value, m = $('pwMsg');
+  const old = $('pwOld').value, pw = $('pwNew').value, pw2 = $('pwNew2').value, m = $('pwMsg');
   const show = (text, kind = 'err') => { m.textContent = text; m.className = 'msg ' + kind; m.hidden = !text; };
-  if (pw.length < 8) return show('Şifre en az 8 karakter olmalı.');
-  if (pw !== pw2) return show('Şifreler aynı değil.');
+  if (!old) return show('Mevcut şifreni yaz.');
+  if (pw.length < 8) return show('Yeni şifre en az 8 karakter olmalı.');
+  if (pw !== pw2) return show('Yeni şifreler aynı değil.');
+  if (pw === old) return show('Yeni şifre eskisiyle aynı olamaz.');
   $('pwSave').disabled = true;
+  // Mevcut şifre, aynı hesapla yeniden giriş denenerek doğrulanır
+  const check = await sb.auth.signInWithPassword({ email: USER.email, password: old });
+  if (check.error) { $('pwSave').disabled = false; return show(/Invalid login|invalid_credentials/i.test(check.error.message + check.error.code) ? 'Mevcut şifren yanlış.' : hataMesaji(check.error)); }
   const { error } = await sb.auth.updateUser({ password: pw });
   $('pwSave').disabled = false;
   if (error) return show(hataMesaji(error));
-  $('pwNew').value = ''; $('pwNew2').value = '';
+  $('pwOld').value = ''; $('pwNew').value = ''; $('pwNew2').value = '';
   show('Şifren değişti.', 'ok');
 });
 let delAccArmed = false;
@@ -1162,6 +1246,7 @@ async function currentSub() { try { return swReg ? await swReg.pushManager.getSu
 async function updateNotifUi() {
   if (!PROFILE) return;
   for (const el of document.querySelectorAll('[data-pref]')) el.checked = PROFILE[el.dataset.pref] !== false;
+  for (const el of document.querySelectorAll('[data-pref-time]')) el.value = (PROFILE[el.dataset.prefTime] || '').slice(0, 5);
   const st = $('notifState'), btn = $('notifBtn');
   if (!pushOk) {
     st.textContent = isIos && !standalone
@@ -1207,6 +1292,14 @@ $('notifBtn').addEventListener('click', async () => {
     btn.disabled = false; updateNotifUi();
   }
 });
+document.querySelectorAll('[data-pref-time]').forEach(el => el.addEventListener('change', async () => {
+  const k = el.dataset.prefTime, v = el.value;
+  if (!/^\d{2}:\d{2}$/.test(v)) { el.value = (PROFILE[k] || '').slice(0, 5); return; }
+  const { error } = await sb.from('profiles').update({ [k]: v }).eq('id', USER.id);
+  if (error) { el.value = (PROFILE[k] || '').slice(0, 5); toast(hataMesaji(error)); return; }
+  PROFILE[k] = v;
+  toast(`Hatırlatma saati ${v} oldu.`);
+}));
 document.querySelectorAll('[data-pref]').forEach(el => el.addEventListener('change', async () => {
   const k = el.dataset.pref, on = el.checked;
   const { error } = await sb.from('profiles').update({ [k]: on }).eq('id', USER.id);
@@ -1256,6 +1349,200 @@ $('pokeBox').addEventListener('click', async e => {
   const n = r.data && r.data.gonderildi;
   toast(n ? 'Dürtüldü, bildirim gitti.' : 'Dürtüldü. Arkadaşın bildirimleri açmamış; uygulamaya girince görecek.');
   $('pokeNote').value = ''; b.textContent = 'Dürtüldü';
+});
+
+// ---- ekipler ----
+// Başkan ekip kurar, kodunu paylaşır; katılan üyelere uygulama içinden görev verir.
+// Verilen görev üyenin kendi listesine düşer ve seriye sayılır.
+let TEAMS = null, teamErr = '', TEAM = null, TEAM_ROWS = [];
+const TEAM_MSG = {
+  katildi: 'Ekibe katıldın.',
+  zaten: 'Zaten bu ekiptesin.',
+  bulunamadi: 'Bu koda ait ekip yok. Kodu kontrol et.',
+  dolu: 'Bu ekip dolu (en fazla 50 kişi).'
+};
+const TEAM_ERR = {
+  ekip_siniri: 'En fazla 10 ekip kurabilirsin.',
+  baskan_degil: 'Bunu yalnızca ekip başkanı yapabilir.',
+  uye_degil: 'Bu kişi artık ekipte değil.',
+  ad_bos: 'Görevin adını yaz.',
+  baskan_ayrilamaz: 'Başkan ekipten ayrılamaz; ekibi silebilirsin.',
+  baskan_cikamaz: 'Başkan kendini çıkaramaz.',
+  ekip_uyesi_degil: 'Bu ekibin üyesi değilsin.'
+};
+const teamError = err => { const m = String((err && err.message) || ''); const k = Object.keys(TEAM_ERR).find(x => m.includes(x)); return k ? TEAM_ERR[k] : hataMesaji(err); };
+async function loadTeams() {
+  if (!PROFILE) return;
+  const { data, error } = await sb.rpc('ekiplerim');
+  if (error) teamErr = teamError(error); else { TEAMS = data || []; teamErr = ''; }
+  renderFriends();
+}
+function teamsHtml() {
+  let h = `<form class="add" data-form="team-new"><input class="name" id="tName" maxlength="40" placeholder="Yeni ekip adı" aria-label="Yeni ekip adı" required><button class="btn primary" type="submit">Kur</button></form>`;
+  h += `<form class="add" data-form="team-join"><input class="name code-in" id="tCode" maxlength="6" placeholder="Ekip koduyla katıl" aria-label="Ekip kodu" autocomplete="off" autocapitalize="characters" spellcheck="false" required><button class="btn secondary" type="submit">Katıl</button></form>`;
+  if (teamErr) h += `<div class="msg err" role="alert">${esc(teamErr)}</div>`;
+  if (TEAMS === null && !teamErr) return h + `<p class="loading">Ekiplerin yükleniyor…</p>`;
+  if (TEAMS && !TEAMS.length) {
+    return h + `<div class="empty"><h2>Henüz bir ekibin yok</h2><p>Bir ekip kur ve kodunu paylaş. Katılan kişilere buradan görev verebilir, bugün kimin neyi bitirdiğini görebilirsin.</p></div>`;
+  }
+  h += `<p class="sec">EKİPLERİN</p><ul class="list">` + (TEAMS || []).map(t =>
+    `<li><button class="frow fbtn" type="button" data-team="${t.id}"><span class="av" aria-hidden="true">${esc(initials(t.name))}</span>`
+    + `<span class="fn"><span class="t">${esc(t.name)}</span><span class="sub">${t.lider_mi ? 'Ekip başkanısın' : 'Başkan: ' + esc(t.lider_adi)} · ${t.uye_sayisi} kişi</span></span><span class="chev" aria-hidden="true">›</span></button></li>`).join('') + `</ul>`;
+  return h;
+}
+async function teamSubmit(form) {
+  const btn = form.querySelector('button[type=submit]');
+  if (form.dataset.form === 'team-new') {
+    const name = $('tName').value.trim();
+    if (name.length < 2) { toast('Ekip adı en az 2 harf olmalı.'); return; }
+    btn.disabled = true;
+    const { error } = await sb.rpc('ekip_kur', { p_ad: name });
+    btn.disabled = false;
+    if (error) { toast(teamError(error)); return; }
+    $('tName').value = ''; toast('Ekip kuruldu. Kodunu paylaşarak kişileri davet et.');
+  } else {
+    const code = $('tCode').value.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) { toast('Ekip kodu 6 karakter olmalı.'); return; }
+    btn.disabled = true;
+    const { data, error } = await sb.rpc('ekibe_katil', { p_kod: code });
+    btn.disabled = false;
+    if (error) { toast(teamError(error)); return; }
+    toast(TEAM_MSG[data] || 'Ekibe katıldın.');
+    if (data === 'katildi') $('tCode').value = '';
+  }
+  loadTeams();
+}
+
+// Ekip penceresi
+const assignForm = uid => `<form class="assign" data-assign="${uid}" data-mask="127" data-type="daily">
+  <input name="ad" maxlength="80" placeholder="Görevin adı" aria-label="Görevin adı" required>
+  <div class="seg"><button type="button" data-atype="daily" aria-pressed="true">Tekrarlı</button><button type="button" data-atype="general" aria-pressed="false">Tek seferlik</button></div>
+  <div class="days" data-adays>${DAY_NAMES.map((n, i) => `<button type="button" data-aday="${i}" aria-pressed="true">${n}</button>`).join('')}</div>
+  <div class="assign-row" data-daily-only><label class="mini">Saat<input type="time" name="saat"></label><label class="mini">Süre (dk)<input type="number" name="sure" min="0" max="600" inputmode="numeric"></label></div>
+  <div class="assign-row" data-general-only hidden><label class="mini">Son tarih<input type="date" name="son"></label></div>
+  <button class="btn primary sm" type="submit">Görevi ver</button>
+</form>`;
+async function openTeam(id) {
+  TEAM = (TEAMS || []).find(t => t.id === id); if (!TEAM) return;
+  $('tmName').textContent = TEAM.name;
+  $('tmSub').textContent = TEAM.lider_mi ? `Ekip başkanısın · ${TEAM.uye_sayisi} kişi` : `Başkan: ${TEAM.lider_adi} · ${TEAM.uye_sayisi} kişi`;
+  $('tmCodeBox').hidden = !TEAM.lider_mi;
+  $('tmCode').textContent = TEAM.code || '';
+  $('tmLeave').textContent = TEAM.lider_mi ? 'Ekibi sil' : 'Ekipten ayrıl';
+  $('tmLeave').classList.remove('armed'); $('tmLeave').dataset.armed = '';
+  $('tmBody').innerHTML = '<p class="hint">Yükleniyor…</p>';
+  if (!$('teamSheet').open) $('teamSheet').showModal();
+  await loadTeamBody();
+}
+async function loadTeamBody() {
+  const team = TEAM;
+  const { data, error } = await sb.rpc('ekip_durumu', { p_team: team.id, p_gun: today() });
+  if (TEAM !== team) return;
+  if (error) { $('tmBody').innerHTML = `<div class="msg err">${esc(teamError(error))}</div>`; return; }
+  TEAM_ROWS = data || [];
+  drawTeamBody();
+}
+function drawTeamBody() {
+  const members = [];
+  for (const r of TEAM_ROWS) {
+    let m = members.find(x => x.user_id === r.user_id);
+    if (!m) members.push(m = { user_id: r.user_id, full_name: r.full_name, lider: r.lider, tasks: [] });
+    if (r.gorev_id) m.tasks.push(r);
+  }
+  const todayBit = 1 << wdIndex(today());
+  const isToday = g => g.tur === 'general' || ((g.gunler || 127) & todayBit);
+  $('tmBody').innerHTML = members.map(m => {
+    const td = m.tasks.filter(isToday);
+    const done = td.filter(g => g.bitti).length;
+    const prog = td.length ? `bugün ${done}/${td.length}` : 'bugün ekip görevi yok';
+    let h = `<div class="member"><div class="frow"><span class="av" aria-hidden="true">${esc(initials(m.full_name))}</span>`
+      + `<span class="fn"><span class="t">${esc(m.full_name)}${m.lider ? ' <span class="tag">başkan</span>' : ''}</span><span class="sub">${prog}</span></span>`
+      + (TEAM.lider_mi && !m.lider ? `<button class="btn ghost sm" type="button" data-kick="${m.user_id}">Çıkar</button>` : '') + `</div>`;
+    if (m.tasks.length) {
+      h += `<ul class="list tlist">` + m.tasks.map(g => {
+        const when = g.tur === 'general' ? (g.son_tarih ? dueLabel(g.son_tarih).text || 'tek seferlik' : 'tek seferlik') : [daysLabel(g.gunler), g.saat ? g.saat.slice(0, 5) : ''].filter(Boolean).join(' · ');
+        const st = g.bitti ? '<span class="meta okk">bitti</span>' : isToday(g) ? '<span class="meta">bekliyor</span>' : '<span class="meta">bugün yok</span>';
+        return `<li class="prow"><span class="fn"><span class="t">${esc(g.gorev_adi)}</span><span class="sub">${esc(when)}</span></span><span class="prow-r">${st}${TEAM.lider_mi ? `<button class="x" type="button" data-untask="${g.gorev_id}" aria-label="${esc(g.gorev_adi)} görevini kaldır">×</button>` : ''}</span></li>`;
+      }).join('') + `</ul>`;
+    }
+    if (TEAM.lider_mi) h += `<button class="link" type="button" data-give="${m.user_id}">+ Görev ver</button><div data-slot="${m.user_id}"></div>`;
+    return h + `</div>`;
+  }).join('');
+}
+$('tmBody').addEventListener('click', async e => {
+  const give = e.target.closest('[data-give]');
+  if (give) {
+    const slot = $('tmBody').querySelector(`[data-slot="${give.dataset.give}"]`);
+    slot.innerHTML = slot.innerHTML ? '' : assignForm(give.dataset.give);
+    const inp = slot.querySelector('input[name=ad]'); if (inp) inp.focus();
+    return;
+  }
+  const f = e.target.closest('form.assign');
+  const at = e.target.closest('[data-atype]');
+  if (at && f) {
+    f.dataset.type = at.dataset.atype;
+    f.querySelectorAll('[data-atype]').forEach(b => b.setAttribute('aria-pressed', String(b === at)));
+    const daily = f.dataset.type === 'daily';
+    f.querySelector('[data-adays]').hidden = !daily;
+    f.querySelector('[data-daily-only]').hidden = !daily;
+    f.querySelector('[data-general-only]').hidden = daily;
+    return;
+  }
+  const ad = e.target.closest('[data-aday]');
+  if (ad && f) {
+    const next = +f.dataset.mask ^ (1 << +ad.dataset.aday);
+    if (!next) { toast('En az bir gün seçili olmalı.'); return; }
+    f.dataset.mask = next; ad.setAttribute('aria-pressed', String(!!(next & (1 << +ad.dataset.aday))));
+    return;
+  }
+  const un = e.target.closest('[data-untask]');
+  if (un) {
+    if (un.dataset.armed !== '1') { un.dataset.armed = '1'; un.textContent = 'Kaldır?'; un.classList.add('armed'); return; }
+    const { error } = await sb.rpc('ekip_gorev_sil', { p_gorev: un.dataset.untask });
+    if (error) { toast(teamError(error)); return; }
+    toast('Görev kaldırıldı.'); loadTeamBody();
+    return;
+  }
+  const kick = e.target.closest('[data-kick]');
+  if (kick) {
+    if (kick.dataset.armed !== '1') { kick.dataset.armed = '1'; kick.textContent = 'Emin misin?'; kick.classList.add('armed'); return; }
+    const { error } = await sb.rpc('uye_cikar', { p_team: TEAM.id, p_uye: kick.dataset.kick });
+    if (error) { toast(teamError(error)); return; }
+    toast('Üye ekipten çıkarıldı.'); TEAM.uye_sayisi--; loadTeamBody(); loadTeams();
+  }
+});
+$('tmBody').addEventListener('submit', async e => {
+  const f = e.target.closest('form.assign'); if (!f) return;
+  e.preventDefault();
+  const v = n => f.querySelector(`[name=${n}]`).value;
+  const name = v('ad').trim();
+  if (!name) { toast('Görevin adını yaz.'); return; }
+  const daily = f.dataset.type === 'daily';
+  const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+  const { data: id, error } = await sb.rpc('gorev_ver', {
+    p_team: TEAM.id, p_uye: f.dataset.assign, p_ad: name, p_tur: f.dataset.type,
+    p_gunler: daily ? +f.dataset.mask : 127, p_saat: daily && v('saat') ? v('saat') : null,
+    p_sure: daily ? (parseInt(v('sure'), 10) || 0) : 0, p_son: !daily && v('son') ? v('son') : null
+  });
+  btn.disabled = false;
+  if (error) { toast(teamError(error)); return; }
+  sb.functions.invoke('durt-bildir', { body: { gorev_id: id } }).catch(() => {});
+  toast('Görev verildi.');
+  if (f.dataset.assign === USER.id) reloadFromServer();
+  loadTeamBody();
+});
+$('tmCopy').addEventListener('click', () => {
+  Promise.resolve().then(() => navigator.clipboard.writeText(TEAM.code))
+    .then(() => toast('Ekip kodu kopyalandı.'), () => toast(`Ekip kodu: ${TEAM.code}`));
+});
+$('tmLeave').addEventListener('click', async () => {
+  const b = $('tmLeave');
+  if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.classList.add('armed'); b.textContent = TEAM.lider_mi ? 'Ekip ve görevleri silinsin mi? Tekrar bas' : 'Ayrılmak için tekrar bas'; return; }
+  const { error } = await sb.rpc(TEAM.lider_mi ? 'ekip_sil' : 'ekipten_ayril', { p_team: TEAM.id });
+  if (error) { toast(teamError(error)); return; }
+  toast(TEAM.lider_mi ? 'Ekip silindi.' : 'Ekipten ayrıldın.');
+  $('teamSheet').close(); TEAM = null;
+  loadTeams(); reloadFromServer();
 });
 
 // ---- dünü düzeltme ----
@@ -1308,7 +1595,7 @@ $('importFile').addEventListener('change', async e => {
     for (const t of data.tasks) {
       if (!t || typeof t.name !== 'string' || !['daily', 'general'].includes(t.type)) continue;
       const nid = uid(); idMap[t.id] = nid; added++;
-      S.tasks.push({ id: nid, name: t.name.slice(0, 80), type: t.type, dur: Math.max(0, Math.min(600, parseInt(t.dur, 10) || 0)), due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : '', done: !!t.done, doneAt: +t.doneAt || 0, days: (parseInt(t.days, 10) >= 1 && parseInt(t.days, 10) <= 127) ? parseInt(t.days, 10) : 127, created: +t.created || Date.now() });
+      S.tasks.push({ id: nid, name: t.name.slice(0, 80), type: t.type, dur: Math.max(0, Math.min(600, parseInt(t.dur, 10) || 0)), due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : '', done: !!t.done, doneAt: +t.doneAt || 0, days: (parseInt(t.days, 10) >= 1 && parseInt(t.days, 10) <= 127) ? parseInt(t.days, 10) : 127, time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : '', created: +t.created || Date.now() });
     }
     const m = a => (Array.isArray(a) ? a : []).map(id => idMap[id]).filter(Boolean);
     for (const [k, r] of Object.entries(data.days || {})) {
@@ -1355,7 +1642,7 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (!loaded) return;
   if (document.hidden) { clearTimeout(syncTimer); sync(); }
-  else { render(); touchSeen(); loadFriends(); }
+  else { reloadFromServer(); touchSeen(); loadFriends(); }
 });
 
 // ---- açılış ----
@@ -1374,30 +1661,43 @@ async function boot() {
   const cached = readCache();
   if (cached) { S = cached; showApp(); }
 
-  const [p, t, d] = await Promise.all([
-    sb.from('profiles').select('full_name, friend_code, is_admin, best_streak, share_progress, remind_morning, remind_evening, weekly_summary, allow_poke').eq('id', USER.id).single(),
-    sb.from('tasks').select('*').order('position'),
-    sb.from('day_logs').select('*').gte('day', shift(today(), -400))
-  ]);
-  if (p.error || t.error || d.error) {
-    const err = p.error || t.error || d.error;
+  if (location.hash === '#arkadaslar') { S.tab = 'friends'; history.replaceState(null, '', location.pathname); }
+  const err = await reloadFromServer(true);
+  if (err) {
     if (cached) { setSync('Çevrimdışı, değişiklikler bu cihazda tutuluyor', true); }
     else { $('loading').textContent = hataMesaji(err) + ' Sayfayı yenile.'; }
     return;
   }
+  showApp();
+  touchSeen();
+  loadFriends();
+}
+// Sunucudaki hâli yükler. Uygulamaya dönülünce de çağrılır; ekip başkanının verdiği yeni görevler böyle gelir.
+// Gönderilmemiş değişiklik varsa yerel hâl korunur.
+async function reloadFromServer(first) {
+  if (!first) {
+    if (!loaded || syncing) { render(); return null; }
+    const pending = S.tasks.some((t, i) => synced.tasks.get(t.id) !== JSON.stringify(taskRow(t, i))) || synced.tasks.size !== S.tasks.length
+      || Object.entries(S.days).some(([k, r]) => synced.days.get(k) !== JSON.stringify(dayRow(k, r)));
+    if (pending) { render(); return null; }
+  }
+  const [p, t, d] = await Promise.all([
+    sb.from('profiles').select('full_name, friend_code, is_admin, best_streak, share_progress, remind_morning, remind_evening, weekly_summary, allow_poke, morning_time, evening_time, remind_tasks').eq('id', USER.id).single(),
+    sb.from('tasks').select('*, teams(name)').order('position'),
+    sb.from('day_logs').select('*').gte('day', shift(today(), -400))
+  ]);
+  if (p.error || t.error || d.error) return p.error || t.error || d.error;
   PROFILE = p.data;
-  if (location.hash === '#arkadaslar') { S.tab = 'friends'; history.replaceState(null, '', location.pathname); }
   fillAccount();
-  const ui = { theme: S.theme, tab: S.tab, timer: S.timer, dismissed: S.dismissed };
+  const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed };
   S = Object.assign(blank(), ui);
-  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at) }));
+  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by }));
   for (const r of d.data) S.days[r.day] = { done: r.done || [], skip: r.skip || [], at: r.at || {}, total: r.total || 0, frozen: !!r.frozen };
   S.best = PROFILE.best_streak || 0;
   markSynced();
   loaded = true;
-  showApp();
-  touchSeen();
-  loadFriends();
+  if (!first) render();
+  return null;
 }
 boot();
 })();
