@@ -1,24 +1,24 @@
 # Yapılacaklar
 
 ## A. Seri kuralları ve hesap (şimdi)
-- [ ] Görev başına haftanın günleri; seri yalnızca o günün işlerine bakar, işi olmayan gün nötr sayılır.
-- [ ] Dünü sonradan düzeltme (yalnızca dün).
-- [ ] İzin günü: ayda 2 hak, seri bozulmaz ama artmaz (bugün ya da dün için).
-- [ ] Ad soyadla girişe deneme sınırı (10 dakikada 5 yanlış deneme).
-- [ ] Hesap ayarları: ad soyad, şifre değiştirme, ilerleme paylaşımı, hesabı silme.
-- [ ] Son 7 gün özeti (tamamlanan gün, en çok kaçırılan iş).
-- [ ] Yönetici paneline özet sayılar (kullanıcı, bugün iş yapan, arkadaşlık, lakap).
+- [x] Görev başına haftanın günleri; seri yalnızca o günün işlerine bakar, işi olmayan gün nötr sayılır.
+- [x] Dünü sonradan düzeltme (yalnızca dün).
+- [x] İzin günü: ayda 2 hak, seri bozulmaz ama artmaz (bugün ya da dün için).
+- [x] Ad soyadla girişe deneme sınırı (10 dakikada 5 yanlış deneme).
+- [x] Hesap ayarları: ad soyad, şifre değiştirme, ilerleme paylaşımı, hesabı silme.
+- [x] Son 7 gün özeti (tamamlanan gün, en çok kaçırılan iş).
+- [x] Yönetici paneline özet sayılar (kullanıcı, bugün iş yapan, arkadaşlık, lakap).
 
 ## B. Arkadaşlar
 - [x] Arkadaş kodu ile ekleme ve onay, lakap takma (supabase/2-arkadaslar.sql).
-- [ ] Arkadaşın serisini ve bugünkü ilerlemesini görme (paylaşım kişinin kendi seçimi).
+- [x] Arkadaşın serisini ve bugünkü ilerlemesini görme (paylaşım kişinin kendi seçimi).
 
 ## C. Telefon ve bildirimler
-- [ ] Telefona yüklenebilir uygulama (PWA: manifest, ikon, service worker).
-- [ ] Bildirim izni ve abonelik (Web Push, VAPID anahtarları).
-- [ ] Dürtme: arkadaşın bitmemiş işi için bildirim gönderme (Edge Function), saatte 1 sınırı, sessiz saatler.
-- [ ] Sabah / akşam hatırlatması (pg_cron + Edge Function); akşamki yalnızca iş kaldıysa.
-- [ ] Haftalık özet bildirimi (Pazar akşamı).
+- [x] Telefona yüklenebilir uygulama (PWA: manifest, ikon, service worker).
+- [x] Bildirim izni ve abonelik (Web Push, VAPID anahtarları).
+- [x] Dürtme: arkadaşın bitmemiş işi için bildirim gönderme (Edge Function), saatte 1 sınırı, sessiz saatler.
+- [x] Sabah / akşam hatırlatması (pg_cron + Edge Function); akşamki yalnızca iş kaldıysa.
+- [x] Haftalık özet bildirimi (Pazar akşamı).
 
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.

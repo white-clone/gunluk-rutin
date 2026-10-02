@@ -8,6 +8,7 @@ create extension if not exists pg_net;
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 create table if not exists private.ayarlar (ad text primary key, deger text not null);
+alter table private.ayarlar enable row level security;
 -- Zamanlanmış görevin Edge Function'a kendini tanıtacağı rastgele anahtar
 insert into private.ayarlar (ad, deger)
   values ('cron', replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''))
