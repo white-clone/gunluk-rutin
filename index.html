@@ -2140,7 +2140,7 @@ async function boot() {
   if (location.hash === '#arkadaslar') { S.tab = 'friends'; history.replaceState(null, '', location.pathname); }
   const err = await reloadFromServer(true);
   if (err) {
-    if (cached) { setSync('Çevrimdışı, değişiklikler bu cihazda tutuluyor', true); }
+    if (cached) { setSync('Sunucuya ulaşılamadı. Yenilemek için dokun.', true); $('syncState').onclick = () => location.reload(); toast(hataMesaji(err)); }
     else { $('loading').textContent = hataMesaji(err) + ' Sayfayı yenile.'; }
     return;
   }
@@ -2161,7 +2161,7 @@ async function reloadFromServer(first) {
   }
   const [p, t, d, v] = await Promise.all([
     sb.from('profiles').select('full_name, friend_code, is_admin, best_streak, share_progress, remind_morning, remind_evening, weekly_summary, allow_poke, morning_time, evening_time, remind_tasks').eq('id', USER.id).single(),
-    sb.from('tasks').select('*, teams(name)').order('position'),
+    sb.from('tasks').select('*, teams!tasks_team_fk(name)').order('position'), // ekip adı: görevin kendi ekibi (paylaşım tablosu ikinci bir bağ oluşturuyor)
     sb.from('day_logs').select('*').gte('day', shift(today(), -400)),
     sb.rpc('gorev_verenler')
   ]);
