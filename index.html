@@ -74,7 +74,12 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .cd.plan{background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
 .cd.today{box-shadow:inset 0 0 0 2px var(--accent)}
 .cd.sel{outline:2px solid var(--ink);outline-offset:1px}
-.cd .dot,.cal-legend .dot{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:var(--timer)}
+.cd .dots{position:absolute;bottom:4px;left:0;right:0;display:flex;justify-content:center;gap:3px}
+.cd .dot,.cal-legend .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--timer)}
+.dot.team{background:var(--accent)}
+.mk.team{border-color:var(--accent);background:var(--accent-soft)}
+.wk-it.team span{color:var(--accent)}
+.wk-it.team i::before{content:'ekip · '}
 .cal-legend{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;font-size:12px;color:var(--ink-muted)}
 .cal-legend span{display:inline-flex;align-items:center;gap:4px;position:relative}
 .cal-legend .dot{position:static;transform:none}
@@ -347,6 +352,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
     <div class="field" id="fDaysWrap"><span class="lbl">GÜNLER</span><div class="days" id="fDays"></div><span class="hint" id="fDaysHint"></span></div>
     <label class="toggle" for="fPoke" id="fPokeWrap"><input type="checkbox" id="fPoke"><span class="fn"><span class="t">Arkadaşlarım bu iş için beni dürtebilsin</span><span class="sub">İşin adı arkadaşlarına görünür; bitirmediysen sana bildirim gönderebilirler.</span></span></label>
     <div class="field" id="fDueWrap"><label for="fDue">SON TARİH (İSTEĞE BAĞLI)</label><input id="fDue" type="date"></div>
+    <div class="field" id="fShareWrap"><span class="lbl">EKİPLERLE PAYLAŞ</span><div id="fShare"></div><span class="hint">Paylaştığın iş, ekip üyelerinin takviminde görünür; isterlerse kendi listelerine ekler.</span></div>
     <div class="row-btns" id="moveBtns"><button type="button" class="btn secondary grow" id="upBtn">Yukarı taşı</button><button type="button" class="btn secondary grow" id="downBtn">Aşağı taşı</button></div>
     <div class="row-btns">
       <button type="button" class="btn danger" id="delBtn">Sil</button>
@@ -765,7 +771,7 @@ function renderDaily(r, cs) {
         const meta = isDone ? (r.at[t.id] || 'bitti') : isSkip ? 'atlandı' : isNow ? [timeLabel(t), 'şimdi'].filter(Boolean).join(' · ') : [timeLabel(t), t.dur ? `${t.dur} dk` : ''].filter(Boolean).join(' · ');
         const late = !isDone && !isSkip && t.time && (t.end || t.time) < nowHM();
         const ts = taskStreak(t.id);
-        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', t.team ? `<span>Ekip: ${esc(t.team)}</span>` : ''].filter(Boolean).join('');
+        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', t.team ? `<span>Ekip: ${esc(t.team)}</span>` : '', SHARES.has(t.id) && SHARES.get(t.id).size ? '<span>paylaşıldı</span>' : ''].filter(Boolean).join('');
         const label = isDone ? `${t.name}: tamamlandı, geri al` : `${t.name}: tamamlandı olarak işaretle`;
         h += `<li class="row ${cls}"><button class="mark" type="button" data-act="toggle" data-id="${t.id}" aria-label="${esc(label)}">${isDone ? check : isSkip ? '' : i + 1}</button>`
           + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${sub ? `<span class="sub">${sub}</span>` : ''}</button>`
@@ -906,7 +912,7 @@ function renderGeneral() {
     for (const t of open) {
       const due = dueLabel(t.due);
       h += `<li class="row next"><button class="mark" type="button" data-act="gtoggle" data-id="${t.id}" aria-label="${esc(t.name)}: tamamlandı olarak işaretle"></button>`
-        + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span></button>`
+        + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${SHARES.has(t.id) && SHARES.get(t.id).size ? '<span class="sub">paylaşıldı</span>' : ''}</button>`
         + (listEdit === 'general' ? delCtl(t) : `<span class="meta${due.late ? ' late' : ''}">${[due.text, timeLabel(t)].filter(Boolean).join(' · ')}</span>`) + '</li>';
     }
     h += `</ol>`;
@@ -1090,6 +1096,8 @@ function openSheet(id) {
   editId = id; delArmed = false;
   editDays = t.days || 127; drawDays();
   $('fPoke').checked = !!t.pokeable;
+  $('fShareWrap').hidden = !!t.assigned;
+  if (!t.assigned) fillShareBox(t);
   $('fTime').value = t.time || ''; $('fEnd').value = t.end || '';
   $('fAllDay').checked = !t.time; $('fRange').hidden = $('fRangeHint').hidden = !t.time;
   const locked = !!t.assigned;
@@ -1765,11 +1773,11 @@ function weekHtml() {
   const t = today(), start = monday(calSel);
   let full = 0, counted = 0, rows = '';
   for (let i = 0; i < 7; i++) {
-    const k = shift(start, i), d = parseKey(k), s = calState(k), items = dayItems(k);
+    const k = shift(start, i), d = parseKey(k), s = calState(k), items = dayItems(k).concat(plansOn(k).map(p => ({ t: { name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '' }, plan: p, due: p.type === 'general' })));
     if (k <= t && (s === 'full' || s === 'part' || s === 'miss')) { counted++; if (s === 'full') full++; }
     const shown = items.slice(0, 4);
     const list = shown.length ? shown.map(it => {
-      const cls = k <= t ? (it.done ? 'ok' : (k < t ? 'no' : '')) : '';
+      const cls = it.plan ? 'team' : k <= t ? (it.done ? 'ok' : (k < t ? 'no' : '')) : '';
       return `<span class="wk-it ${cls}">${it.t.time ? `<i>${timeLabel(it.t)}</i>` : it.due ? '<i>tüm gün</i>' : ''}<span>${esc(it.t.name)}</span></span>`;
     }).join('') + (items.length > 4 ? `<span class="wk-more">+${items.length - 4} iş daha</span>` : '') : '<span class="wk-more">İş yok</span>';
     rows += `<button type="button" class="wk-day ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}">`
@@ -1793,15 +1801,15 @@ function monthHtml() {
     const k = `${y}-${pad(m)}-${pad(d)}`, s = calState(k);
     if (k <= t && (s === 'full' || s === 'part' || s === 'miss')) { counted++; if (s === 'full') full++; }
     if (s === 'frozen') frozen++;
-    const due = general().some(g => g.due === k && !g.done);
-    cells += `<button type="button" class="cd ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}" aria-label="${d} ${MONTHS[m - 1]}${CAL_NAMES[s] ? ': ' + CAL_NAMES[s] : ''}${due ? ', son tarihli iş var' : ''}">${d}${due ? '<i class="dot"></i>' : ''}</button>`;
+    const due = general().some(g => g.due === k && !g.done), plan = plansOn(k).some(p => p.type === 'general'); // tekrarlı ekip planları her güne nokta koymasın
+    cells += `<button type="button" class="cd ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}" aria-label="${d} ${MONTHS[m - 1]}${CAL_NAMES[s] ? ': ' + CAL_NAMES[s] : ''}${due ? ', son tarihli iş var' : ''}${plan ? ', ekip planı var' : ''}">${d}<span class="dots">${due ? '<i class="dot"></i>' : ''}${plan ? '<i class="dot team"></i>' : ''}</span></button>`;
   }
   const stats = counted ? `Bu ay ${full}/${counted} gün tamam${frozen ? ` · ${frozen} izin günü` : ''}` : 'Bu ay henüz sayılan gün yok';
   return `<div class="cal-head"><button class="icon-btn" type="button" data-calnav="-1" aria-label="Önceki ay">‹</button>`
     + `<div class="cal-title"><b>${MONTHS[m - 1]} ${y}</b><span class="st-sub">${stats}</span></div>`
     + `<button class="icon-btn" type="button" data-calnav="1" aria-label="Sonraki ay">›</button></div>`
     + `<div class="cal">${cells}</div>`
-    + `<div class="cal-legend"><span><i class="lg full"></i>tamam</span><span><i class="lg part"></i>eksik</span><span><i class="lg frozen"></i>izin</span><span><i class="dot"></i>son tarih</span>`
+    + `<div class="cal-legend"><span><i class="lg full"></i>tamam</span><span><i class="lg part"></i>eksik</span><span><i class="lg frozen"></i>izin</span><span><i class="dot"></i>son tarih</span><span><i class="dot team"></i>ekip planı</span>`
     + (calMonth !== t.slice(0, 7) ? `<button class="link" type="button" data-calnav="0">Bugüne dön</button>` : '') + `</div>`;
 }
 function calDayHtml(k) {
@@ -1822,7 +1830,12 @@ function calDayHtml(k) {
     h += `<p class="sec">SON TARİHLİ</p><ul class="list">` + dueTasks.map(g =>
       `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<span class="t">${esc(g.name)}</span><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span></li>`).join('') + `</ul>`;
   }
-  if (!dailyTasks.length && !dueTasks.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
+  const plans = plansOn(k);
+  if (plans.length) {
+    h += `<p class="sec">EKİP PLANLARI</p><ul class="list">` + plans.map(p =>
+      `<li class="crow"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(p.owner_name)} · ${esc(p.team_name)}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button></li>`).join('') + `</ul>`;
+  }
+  if (!dailyTasks.length && !dueTasks.length && !plans.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
   if (k === shift(t, -1) && s !== 'full' && s !== 'rest' && s !== 'none') h += `<button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`;
   if (k >= t) h += `<form class="add-wrap" data-form="calAdd"><div class="add"><input class="name" id="calName" maxlength="80" placeholder="Bu güne iş ekle" aria-label="Bu güne iş ekle" autocomplete="off" required><button class="btn primary" type="submit">Ekle</button></div>`
     + `<div class="seg" role="group" aria-label="Zaman"><button type="button" data-allday="1" aria-pressed="${calAllDay}">Tüm gün</button><button type="button" data-allday="0" aria-pressed="${!calAllDay}">Saat aralığı</button></div>`
@@ -1842,6 +1855,8 @@ $('view-calendar').addEventListener('click', e => {
     if (!calAllDay) $('calTime').focus();
     return;
   }
+  const cp = e.target.closest('[data-copyplan]');
+  if (cp) { copyPlan(cp.dataset.copyplan, calSel); return; }
   const c = e.target.closest('[data-cal]');
   if (c) { calSel = c.dataset.cal; renderCalendar(); return; }
   const n = e.target.closest('[data-calnav]');
@@ -1853,6 +1868,56 @@ $('view-calendar').addEventListener('click', e => {
   }
   if (e.target.closest('[data-act="fixY"]')) openYesterday();
 });
+
+// ---- ekiple paylaşma ----
+// Kişi kendi planladığı işi sonradan ekipleriyle paylaşır; paylaşılan iş ekip üyelerinin takviminde "ekip planı" olarak görünür.
+let SHARES = new Map(), PLANS = [];
+async function loadShares() {
+  const [s, p] = await Promise.all([sb.rpc('paylasimlarim'), sb.rpc('ekip_planlari')]);
+  if (!s.error) {
+    SHARES = new Map();
+    for (const r of s.data || []) { if (!SHARES.has(r.task_id)) SHARES.set(r.task_id, new Set()); SHARES.get(r.task_id).add(r.team_id); }
+  }
+  if (!p.error) PLANS = p.data || [];
+  if (loaded) render();
+}
+// O güne düşen, başkalarının paylaştığı ekip planları
+function plansOn(k) {
+  return PLANS.filter(p => !p.benim && (p.type === 'general' ? p.due === k : k >= today() && ((p.days || 127) & (1 << wdIndex(k)))));
+}
+const planTime = p => p.saat ? p.saat.slice(0, 5) + (p.bitis ? '–' + p.bitis.slice(0, 5) : '') : '';
+async function fillShareBox(t) {
+  const box = $('fShare');
+  if (!TEAMS) { box.innerHTML = '<p class="hint">Ekiplerin yükleniyor…</p>'; await loadTeams(); }
+  if (editId !== t.id) return;
+  if (!TEAMS || !TEAMS.length) { box.innerHTML = '<p class="hint">Henüz bir ekibin yok. Arkadaşlar → Ekipler bölümünden ekip kurabilirsin.</p>'; return; }
+  const on = SHARES.get(t.id) || new Set();
+  box.innerHTML = `<div class="checks">` + TEAMS.map(tm => `<label class="check"><input type="checkbox" data-share="${tm.id}"${on.has(tm.id) ? ' checked' : ''}><span class="fn"><span class="t">${esc(tm.name)}</span><span class="sub">${tm.uye_sayisi} kişi</span></span></label>`).join('') + `</div>`;
+}
+$('fShare').addEventListener('change', async e => {
+  const cb = e.target.closest('[data-share]'); if (!cb) return;
+  const id = editId, team = cb.dataset.share, on = cb.checked;
+  cb.disabled = true;
+  // Yeni eklenen iş henüz sunucuya gitmediyse önce gönderilir
+  if (!synced.tasks.has(id)) { clearTimeout(syncTimer); await sync(); }
+  if (!synced.tasks.has(id)) { cb.checked = !on; cb.disabled = false; toast('İş henüz kaydedilmedi. Bağlantını kontrol edip tekrar dene.'); return; }
+  const { error } = await sb.rpc(on ? 'paylas' : 'paylasimi_kaldir', { p_task: id, p_team: team });
+  cb.disabled = false;
+  if (error) { cb.checked = !on; toast(teamError(error)); return; }
+  if (!SHARES.has(id)) SHARES.set(id, new Set());
+  SHARES.get(id)[on ? 'add' : 'delete'](team);
+  const name = ((TEAMS || []).find(x => x.id === team) || {}).name || 'ekip';
+  toast(on ? `"${name}" ekibiyle paylaşıldı.` : `"${name}" ekibiyle paylaşım kaldırıldı.`);
+  loadShares();
+});
+// Ekip planını kendi listene kopyala
+function copyPlan(id, k) {
+  const p = PLANS.find(x => x.task_id === id); if (!p) return;
+  if (p.type === 'general') S.tasks.push({ id: uid(), name: p.name, type: 'general', due: p.due || k, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', done: false, created: Date.now() });
+  else S.tasks.push({ id: uid(), name: p.name, type: 'daily', dur: 0, days: p.days || 127, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', created: Date.now() });
+  render();
+  toast(`"${p.name}" listene eklendi.`);
+}
 
 // ---- dünü düzeltme ----
 function openYesterday() {
@@ -1951,7 +2016,7 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (!loaded) return;
   if (document.hidden) { clearTimeout(syncTimer); sync(); }
-  else { reloadFromServer(); touchSeen(); loadFriends(); }
+  else { reloadFromServer(); touchSeen(); loadFriends(); loadShares(); }
 });
 
 // ---- açılış ----
@@ -1981,6 +2046,7 @@ async function boot() {
   touchSeen();
   loadFriends();
   if (S.ftab === 'teams') loadTeams();
+  loadShares();
 }
 // Sunucudaki hâli yükler. Uygulamaya dönülünce de çağrılır; ekip başkanının verdiği yeni görevler böyle gelir.
 // Gönderilmemiş değişiklik varsa yerel hâl korunur.
