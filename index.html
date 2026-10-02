@@ -62,6 +62,8 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .poke-row input:focus{outline:none;border-color:var(--accent)}
 .poke .hint{margin:0;font-size:13px;line-height:18px;color:var(--ink-muted)}
 .av.lg{width:48px;height:48px;font-size:16px;flex:none}
+.sheet-top{position:sticky;top:calc(-1 * var(--space-6));margin:calc(-1 * var(--space-3)) 0 calc(-1 * var(--space-2));padding-block:var(--space-2);background:var(--surface);z-index:1}
+.back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:6px 8px 6px 0;font-weight:600;color:var(--accent)}
 .acc-head{display:flex;align-items:center;gap:var(--space-3)}
 .acc-head h2{margin:0}
 .acc-row{display:flex;gap:var(--space-2);align-items:flex-end}
@@ -231,6 +233,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
 
 <dialog id="sheet">
   <form class="sheet" id="sheetForm" method="dialog">
+    <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <h2 id="sheetTitle">Görevi düzenle</h2>
     <div class="field"><label for="fName">AD</label><input id="fName" maxlength="80" required></div>
     <div class="field"><span class="lbl">TÜR</span>
@@ -252,6 +255,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
 
 <dialog id="account">
   <div class="sheet">
+    <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <div class="acc-head"><span class="av lg" id="accAv" aria-hidden="true"></span><div class="fn"><h2 id="accName"></h2><span class="sub" id="accMail"></span></div></div>
     <div class="code"><div><span class="eyebrow">ARKADAŞ KODUN</span><b id="accCode"></b></div></div>
     <a class="btn secondary block" id="adminLink" href="yonetici.html" hidden>Yönetici paneli</a>
@@ -297,6 +301,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
 
 <dialog id="ySheet">
   <form class="sheet" id="yForm" method="dialog">
+    <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <h2>Dünü düzelt</h2>
     <p class="muted" id="yDate"></p>
     <div class="checks" id="yList"></div>
@@ -310,6 +315,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
 
 <dialog id="friendSheet">
   <form class="sheet" id="friendForm" method="dialog">
+    <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <h2 id="frName"></h2>
     <p class="muted" id="frSince"></p>
     <div class="poke" id="pokeBox"></div>
@@ -1067,6 +1073,12 @@ $('frRemove').addEventListener('click', async () => {
   if (ok) $('friendSheet').close();
 });
 
+// Açılan pencereler: Geri düğmesi ve arka plana dokunma kapatır
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-close]');
+  if (b) { b.closest('dialog').close(); return; }
+  if (e.target.tagName === 'DIALOG' && e.target.open) e.target.close();
+});
 // ---- hesap ----
 $('accountBtn').addEventListener('click', () => { if (PROFILE) $('account').showModal(); });
 $('accClose').addEventListener('click', () => $('account').close());
