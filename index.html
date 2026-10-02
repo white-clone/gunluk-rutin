@@ -136,7 +136,9 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .days.sm button{padding:7px 0;font-size:12px}
 .time-in{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:5px 6px;font:500 13px/18px var(--font-mono);color:var(--ink);min-width:0}
 .members{display:grid;gap:var(--space-3)}
-.crow-r{display:flex;align-items:center;gap:4px}
+.crow-r{display:flex;align-items:center;gap:2px}
+button.cal-open{border:0;background:none;padding:2px 0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+button.cal-open:hover .t{text-decoration:underline;text-underline-offset:3px}
 .x.share{display:grid;place-content:center;color:var(--ink-muted);padding:6px;border-radius:var(--radius-sm)}
 .x.share.on{color:var(--accent);background:var(--accent-soft)}
 #spGive{justify-self:start}
@@ -633,6 +635,8 @@ const noteIcon = '<svg class="ni" width="12" height="12" viewBox="0 0 12 12" fil
 // Notun ilk satırından kısa bir önizleme (önce kişinin kendi notu, yoksa görevi verenin notu)
 const notePreview = t => { const n = (t.note || t.assignNote || '').split('\n')[0].trim(); return n ? `<span class="np">${noteIcon}${esc(n.length > 42 ? n.slice(0, 40) + '…' : n)}</span>` : ''; };
 const shareIcon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="3.5" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" stroke="currentColor" stroke-width="1.5"/></svg>';
+// Takvimde silme: ilk basışta 'Sil?' olur, ikinci basışta siler (ekip görevlerinde yok)
+const calDel = t => t.assigned ? '' : `<button class="x del${delArm === t.id ? ' armed' : ''}" type="button" data-caldel="${t.id}" aria-label="${esc(t.name)} işini sil" title="Sil">${delArm === t.id ? 'Sil?' : trashIcon}</button>`;
 const shareBtn = t => t.assigned ? '' : `<button class="x share${isShared(t) ? ' on' : ''}" type="button" data-sharetask="${t.id}" aria-label="${esc(t.name)} işini paylaş" title="Paylaş">${shareIcon}</button>`;
 // Ekip görevi: kim verdi, hangi ekipten
 const assignLabel = t => t.assigned ? [t.by ? `${t.by} verdi` : '', t.team].filter(Boolean).join(' · ') : '';
@@ -1917,12 +1921,12 @@ function calDayHtml(k) {
     h += `<ul class="list">` + dailyTasks.map(x => {
       const done = rec && rec.done.includes(x.id);
       const mark = past ? (done ? `<span class="mk ok">${check}</span>` : '<span class="mk"></span>') : '<span class="mk plan"></span>';
-      return `<li class="crow">${mark}<span class="fn"><span class="t">${esc(x.name)}</span>${x.assigned ? `<span class="sub">${esc(assignLabel(x))}</span>` : ''}${notePreview(x) ? `<span class="sub">${notePreview(x)}</span>` : ''}</span><span class="crow-r"><span class="meta">${[timeLabel(x), past && done && rec.at && rec.at[x.id] && rec.at[x.id] !== 'sonradan' ? rec.at[x.id] : ''].filter(Boolean).join(' · ')}</span>${shareBtn(x)}</span></li>`;
+      return `<li class="crow">${mark}<button class="fn cal-open" type="button" data-caledit="${x.id}" aria-label="${esc(x.name)} işini düzenle"><span class="t">${esc(x.name)}</span>${x.assigned ? `<span class="sub">${esc(assignLabel(x))}</span>` : ''}${notePreview(x) ? `<span class="sub">${notePreview(x)}</span>` : ''}</button><span class="crow-r"><span class="meta">${[timeLabel(x), past && done && rec.at && rec.at[x.id] && rec.at[x.id] !== 'sonradan' ? rec.at[x.id] : ''].filter(Boolean).join(' · ')}</span>${shareBtn(x)}${calDel(x)}</span></li>`;
     }).join('') + `</ul>`;
   }
   if (dueTasks.length) {
     h += `<p class="sec">SON TARİHLİ</p><ul class="list">` + dueTasks.map(g =>
-      `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<span class="fn"><span class="t">${esc(g.name)}</span>${g.assigned ? `<span class="sub">${esc(assignLabel(g))}</span>` : ''}${notePreview(g) ? `<span class="sub">${notePreview(g)}</span>` : ''}</span><span class="crow-r"><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span>${shareBtn(g)}</span></li>`).join('') + `</ul>`;
+      `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<button class="fn cal-open" type="button" data-caledit="${g.id}" aria-label="${esc(g.name)} işini düzenle"><span class="t">${esc(g.name)}</span>${g.assigned ? `<span class="sub">${esc(assignLabel(g))}</span>` : ''}${notePreview(g) ? `<span class="sub">${notePreview(g)}</span>` : ''}</button><span class="crow-r"><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span>${shareBtn(g)}${calDel(g)}</span></li>`).join('') + `</ul>`;
   }
   const plans = plansOn(k);
   if (plans.length) {
@@ -1955,6 +1959,17 @@ $('view-calendar').addEventListener('click', e => {
     if (pl) openGive({ name: pl.name, type: pl.type, days: pl.days, time: pl.saat ? pl.saat.slice(0, 5) : '', end: pl.bitis ? pl.bitis.slice(0, 5) : '', due: pl.due || calSel, dur: 0 }, pl.team_id);
     return;
   }
+  const ce = e.target.closest('[data-caledit]');
+  if (ce) { openSheet(ce.dataset.caledit); return; }
+  const cd = e.target.closest('[data-caldel]');
+  if (cd) {
+    const id = cd.dataset.caldel, t = find(id); if (!t || t.assigned) return;
+    if (delArm !== id) { delArm = id; renderCalendar(); return; }
+    forgetToday(id); S.tasks = S.tasks.filter(x => x.id !== id); delArm = '';
+    render(); toast(`"${t.name}" silindi.`);
+    return;
+  }
+  if (delArm && !e.target.closest('[data-caldel]')) delArm = '';
   const cp = e.target.closest('[data-copyplan]');
   if (cp) { copyPlan(cp.dataset.copyplan, calSel); return; }
   const c = e.target.closest('[data-cal]');
