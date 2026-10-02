@@ -48,6 +48,8 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .fn .t{font-weight:600;overflow-wrap:anywhere}
 .fn .sub{font-size:13px;line-height:18px;color:var(--ink-muted);overflow-wrap:anywhere}
 .fbtns{display:flex;gap:4px}
+.frow.req{grid-template-columns:36px minmax(0,1fr)}
+.frow.req .fbtns{grid-column:2}
 .chev{color:var(--ink-muted);font-size:20px;line-height:1}
 .code-in{text-transform:uppercase;font-family:var(--font-mono);letter-spacing:.12em}
 .code-in::placeholder{text-transform:none;font-family:var(--font-sans);letter-spacing:0}
@@ -972,7 +974,7 @@ function renderFriends() {
   if (FR === null && !frError) h += `<p class="loading">Arkadaşların yükleniyor…</p>`;
   if (incoming.length) {
     h += `<p class="sec">İSTEKLER (${incoming.length})</p><ul class="list">` + incoming.map(f =>
-      `<li class="frow"><span class="av" aria-hidden="true">${esc(initials(f.full_name))}</span><span class="fn"><span class="t">${esc(f.full_name)}</span><span class="sub">seni arkadaş olarak eklemek istiyor</span></span>`
+      `<li class="frow req"><span class="av" aria-hidden="true">${esc(initials(f.full_name))}</span><span class="fn"><span class="t">${esc(f.full_name)}</span><span class="sub">seni arkadaş olarak eklemek istiyor</span></span>`
       + `<span class="fbtns"><button class="btn done sm" type="button" data-fact="accept" data-id="${f.id}">Kabul et</button><button class="btn ghost sm" type="button" data-fact="reject" data-id="${f.id}">Reddet</button></span></li>`).join('') + `</ul>`;
   }
   if (friends.length) {
