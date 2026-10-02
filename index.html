@@ -135,6 +135,14 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .days.sm button{padding:7px 0;font-size:12px}
 .time-in{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:5px 6px;font:500 13px/18px var(--font-mono);color:var(--ink);min-width:0}
 .members{display:grid;gap:var(--space-3)}
+.field textarea,.assign textarea{border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-md);padding:10px 12px;width:100%;min-width:0;resize:vertical;font:400 15px/22px var(--font-sans);color:var(--ink)}
+.assign textarea{background:var(--surface);font-size:14px}
+.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.from-note{margin:0;background:var(--accent-soft);border-radius:var(--radius-md);padding:10px 12px;font-size:14px;line-height:20px;white-space:pre-wrap;overflow-wrap:anywhere}
+.from-note b{font-weight:600}
+.np{display:inline-flex;align-items:center;gap:4px;color:var(--ink-muted);min-width:0;overflow-wrap:anywhere}
+.np .ni{flex:none}
+.card-note{margin:-8px 0 0;font-size:14px;line-height:20px;color:var(--ink-muted);white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
 .sel{border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-md);padding:11px 12px;color:var(--ink);width:100%}
 .fbtns.col{flex-direction:column;align-items:flex-end}
 .crow .fn{display:grid;min-width:0}
@@ -358,6 +366,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
     <div class="field" id="fDaysWrap"><span class="lbl">GÜNLER</span><div class="days" id="fDays"></div><span class="hint" id="fDaysHint"></span></div>
     <label class="toggle" for="fPoke" id="fPokeWrap"><input type="checkbox" id="fPoke"><span class="fn"><span class="t">Arkadaşlarım bu iş için beni dürtebilsin</span><span class="sub">İşin adı arkadaşlarına görünür; bitirmediysen sana bildirim gönderebilirler.</span></span></label>
     <div class="field" id="fDueWrap"><label for="fDue">SON TARİH (İSTEĞE BAĞLI)</label><input id="fDue" type="date"></div>
+    <div class="field"><label for="fNote">NOT</label><p class="from-note" id="fFromNote" hidden></p><textarea id="fNote" maxlength="500" rows="3" placeholder="Bu işle ilgili hatırlatma, bağlantı, liste…"></textarea><span class="hint" id="fNoteCount"></span></div>
     <div class="field" id="fShareWrap"><span class="lbl">EKİPLERLE PAYLAŞ</span><div id="fShare"></div><span class="hint">Paylaştığın iş, ekip üyelerinin takviminde görünür; isterlerse kendi listelerine ekler.</span><button class="link" type="button" id="fGive">Ekip üyesine görev olarak ver</button></div>
     <div class="row-btns" id="moveBtns"><button type="button" class="btn secondary grow" id="upBtn">Yukarı taşı</button><button type="button" class="btn secondary grow" id="downBtn">Aşağı taşı</button></div>
     <div class="row-btns">
@@ -436,6 +445,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
     <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <div><h2>Görev olarak ver</h2><p class="hint" id="gpWhat"></p></div>
     <div class="field"><label for="gpTeam">EKİP</label><select id="gpTeam" class="sel"></select></div>
+    <div class="field"><label for="gpNote">NOT (İSTEĞE BAĞLI)</label><textarea id="gpNote" maxlength="500" rows="2" placeholder="Görevle ilgili açıklama"></textarea></div>
     <div class="field"><span class="lbl">KİME</span><div id="gpMembers"></div><span class="hint">Görev seçtiğin kişilerin listesine ve takvimine, senin verdiğin bilgisiyle düşer.</span></div>
     <div class="row-btns"><span class="grow"></span><button type="button" class="btn ghost" data-close>Vazgeç</button><button type="submit" class="btn primary" id="gpSave">Görevi ver</button></div>
   </form>
@@ -526,7 +536,7 @@ function save() {
 // ---- eşitleme ----
 // Son eşitlenen hâl satır satır tutulur; yalnızca değişen satırlar gönderilir.
 const synced = { tasks: new Map(), days: new Map(), prof: '' };
-const taskRow = (t, i) => ({ id: t.id, user_id: USER.id, name: t.name, type: t.type, dur: t.type === 'daily' ? (t.dur || 0) : 0, days: t.type === 'daily' ? (t.days || 127) : 127, pokeable: t.type === 'daily' && !!t.pokeable, time: t.time || null, end_time: t.time && t.end ? t.end : null, due: t.type === 'general' && t.due ? t.due : null, done: t.type === 'general' && !!t.done, done_at: t.type === 'general' && t.doneAt ? new Date(t.doneAt).toISOString() : null, position: i });
+const taskRow = (t, i) => ({ id: t.id, user_id: USER.id, name: t.name, type: t.type, dur: t.type === 'daily' ? (t.dur || 0) : 0, days: t.type === 'daily' ? (t.days || 127) : 127, pokeable: t.type === 'daily' && !!t.pokeable, time: t.time || null, end_time: t.time && t.end ? t.end : null, note: (t.note || '').trim() ? t.note.trim().slice(0, 500) : null, due: t.type === 'general' && t.due ? t.due : null, done: t.type === 'general' && !!t.done, done_at: t.type === 'general' && t.doneAt ? new Date(t.doneAt).toISOString() : null, position: i });
 const dayRow = (k, r) => ({ user_id: USER.id, day: k, done: r.done, skip: r.skip, at: r.at || {}, total: r.total || 0, frozen: !!r.frozen });
 // Profildeki özet: en uzun seri ve arkadaşların gördüğü bugünkü ilerleme
 const profRow = () => {
@@ -600,6 +610,9 @@ const wdIndex = k => (parseKey(k).getDay() + 6) % 7;
 const activeOn = (t, k) => t.type === 'daily' && !!((t.days || 127) & (1 << wdIndex(k)));
 const createdKey = t => t.created ? keyOf(new Date(t.created)) : '0000-00-00';
 // Saati olan işler sırada saate göre yer alır; saati olmayanlar kendi sırasını korur.
+const noteIcon = '<svg class="ni" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2 1.5h5.5L10 4v6.5H2z M7.5 1.5V4H10 M4 6.5h4 M4 8.5h3" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+// Notun ilk satırından kısa bir önizleme (önce kişinin kendi notu, yoksa görevi verenin notu)
+const notePreview = t => { const n = (t.note || t.assignNote || '').split('\n')[0].trim(); return n ? `<span class="np">${noteIcon}${esc(n.length > 42 ? n.slice(0, 40) + '…' : n)}</span>` : ''; };
 // Ekip görevi: kim verdi, hangi ekipten
 const assignLabel = t => t.assigned ? [t.by ? `${t.by} verdi` : '', t.team].filter(Boolean).join(' · ') : '';
 const timeLabel = t => t.time ? (t.end ? `${t.time}–${t.end}` : t.time) : '';
@@ -789,7 +802,7 @@ function renderDaily(r, cs) {
         const meta = isDone ? (r.at[t.id] || 'bitti') : isSkip ? 'atlandı' : isNow ? [timeLabel(t), 'şimdi'].filter(Boolean).join(' · ') : [timeLabel(t), t.dur ? `${t.dur} dk` : ''].filter(Boolean).join(' · ');
         const late = !isDone && !isSkip && t.time && (t.end || t.time) < nowHM();
         const ts = taskStreak(t.id);
-        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', t.assigned ? `<span>${esc(assignLabel(t))}</span>` : '', SHARES.has(t.id) && SHARES.get(t.id).size ? '<span>paylaşıldı</span>' : ''].filter(Boolean).join('');
+        const sub = [t.dur && (isDone || isNow) ? `${t.dur} dk` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', t.assigned ? `<span>${esc(assignLabel(t))}</span>` : '', SHARES.has(t.id) && SHARES.get(t.id).size ? '<span>paylaşıldı</span>' : '', notePreview(t)].filter(Boolean).join('');
         const label = isDone ? `${t.name}: tamamlandı, geri al` : `${t.name}: tamamlandı olarak işaretle`;
         h += `<li class="row ${cls}"><button class="mark" type="button" data-act="toggle" data-id="${t.id}" aria-label="${esc(label)}">${isDone ? check : isSkip ? '' : i + 1}</button>`
           + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${sub ? `<span class="sub">${sub}</span>` : ''}</button>`
@@ -863,7 +876,7 @@ function cardHtml(r, cur, list, cs) {
       : running ? `<button class="btn outline" type="button" data-act="pause">Duraklat</button>`
       : `<button class="btn outline" type="button" data-act="start">${S.timer ? 'Devam' : 'Başla'}</button>`;
   }
-  return `<div class="card"><div class="lab">ŞİMDİ${cur.time ? ' · ' + timeLabel(cur) : ''} · ADIM ${idx} / ${list.length}</div><h2 class="nm">${esc(cur.name)}</h2>${ring}`
+  return `<div class="card"><div class="lab">ŞİMDİ${cur.time ? ' · ' + timeLabel(cur) : ''} · ADIM ${idx} / ${list.length}</div><h2 class="nm">${esc(cur.name)}</h2>${cur.note || cur.assignNote ? `<p class="card-note">${esc(cur.note || cur.assignNote)}</p>` : ''}${ring}`
     + `<div class="acts">${timerBtn}<button class="btn done" type="button" data-act="done" data-id="${cur.id}">Bitti</button><button class="btn ghost" type="button" data-act="skip" data-id="${cur.id}">Atla</button></div>`
     + (nxt ? `<p class="next">Sıradaki: ${esc(nxt.name)}${nxt.dur ? ` · ${nxt.dur} dk` : ''}</p>` : '<p class="next">Bu son adım.</p>')
     + `</div>`;
@@ -930,7 +943,7 @@ function renderGeneral() {
     for (const t of open) {
       const due = dueLabel(t.due);
       h += `<li class="row next"><button class="mark" type="button" data-act="gtoggle" data-id="${t.id}" aria-label="${esc(t.name)}: tamamlandı olarak işaretle"></button>`
-        + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${t.assigned ? `<span class="sub">${esc(assignLabel(t))}</span>` : SHARES.has(t.id) && SHARES.get(t.id).size ? '<span class="sub">paylaşıldı</span>' : ''}</button>`
+        + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${t.assigned ? `<span class="sub">${esc(assignLabel(t))}</span>` : SHARES.has(t.id) && SHARES.get(t.id).size ? '<span class="sub">paylaşıldı</span>' : ''}${notePreview(t) ? `<span class="sub">${notePreview(t)}</span>` : ''}</button>`
         + (listEdit === 'general' ? delCtl(t) : `<span class="meta${due.late ? ' late' : ''}">${[due.text, timeLabel(t)].filter(Boolean).join(' · ')}</span>`) + '</li>';
     }
     h += `</ol>`;
@@ -1083,6 +1096,7 @@ function applyTheme() {
 
 // ---- düzenleme sayfası ----
 let editId = null, editType = 'daily', delArmed = false, editDays = 127;
+$('fNote').addEventListener('input', () => { const n = $('fNote').value.length; $('fNoteCount').textContent = n > 400 ? n + '/500' : ''; });
 $('fAllDay').addEventListener('change', () => {
   const on = $('fAllDay').checked;
   $('fRange').hidden = $('fRangeHint').hidden = on;
@@ -1114,6 +1128,9 @@ function openSheet(id) {
   editId = id; delArmed = false;
   editDays = t.days || 127; drawDays();
   $('fPoke').checked = !!t.pokeable;
+  $('fNote').value = t.note || ''; $('fNoteCount').textContent = '';
+  $('fFromNote').hidden = !t.assignNote;
+  $('fFromNote').innerHTML = t.assignNote ? `<b>${esc(t.by || 'Ekip başkanı')} not bıraktı:</b> ${esc(t.assignNote)}` : '';
   $('fShareWrap').hidden = !!t.assigned;
   if (!t.assigned) fillShareBox(t);
   $('fTime').value = t.time || ''; $('fEnd').value = t.end || '';
@@ -1161,6 +1178,7 @@ $('sheetForm').addEventListener('submit', e => {
   if (en && !st) { toast('Bitiş saati için başlangıç saatini de yaz.'); return; }
   if (st && en && en <= st) { toast('Bitiş saati başlangıçtan sonra olmalı.'); return; }
   t.time = st || ''; t.end = st ? (en || '') : '';
+  t.note = $('fNote').value.trim().slice(0, 500);
   if (t.type !== editType) {
     forgetToday(t.id);
     // türü değişen görev ilgili listenin sonuna gider
@@ -1581,6 +1599,7 @@ const assignForm = uid => `<form class="assign" data-assign="${uid}" data-mask="
   <div class="days" data-adays>${DAY_NAMES.map((n, i) => `<button type="button" data-aday="${i}" aria-pressed="true">${n}</button>`).join('')}</div>
   <div class="assign-row" data-daily-only><label class="mini">Başlangıç<input type="time" name="saat"></label><label class="mini">Bitiş<input type="time" name="bitis"></label><label class="mini">Süre (dk)<input type="number" name="sure" min="0" max="600" inputmode="numeric"></label></div>
   <div class="assign-row" data-general-only hidden><label class="mini">Son tarih<input type="date" name="son"></label></div>
+  <textarea name="not" maxlength="500" rows="2" placeholder="Not (isteğe bağlı)" aria-label="Görev notu"></textarea>
   <button class="btn primary sm" type="submit">Görevi ver</button>
 </form>`;
 async function openTeam(id) {
@@ -1732,7 +1751,7 @@ $('tmBody').addEventListener('submit', async e => {
   const { data: id, error } = await sb.rpc('gorev_ver', {
     p_team: TEAM.id, p_uye: f.dataset.assign, p_ad: name, p_tur: f.dataset.type,
     p_gunler: daily ? +f.dataset.mask : 127, p_saat: daily && v('saat') ? v('saat') : null, p_bitis: daily && v('saat') && v('bitis') ? v('bitis') : null,
-    p_sure: daily ? (parseInt(v('sure'), 10) || 0) : 0, p_son: !daily && v('son') ? v('son') : null
+    p_sure: daily ? (parseInt(v('sure'), 10) || 0) : 0, p_son: !daily && v('son') ? v('son') : null, p_not: v('not').trim() || null
   });
   btn.disabled = false;
   if (error) { toast(teamError(error)); return; }
@@ -1841,12 +1860,12 @@ function calDayHtml(k) {
     h += `<ul class="list">` + dailyTasks.map(x => {
       const done = rec && rec.done.includes(x.id);
       const mark = past ? (done ? `<span class="mk ok">${check}</span>` : '<span class="mk"></span>') : '<span class="mk plan"></span>';
-      return `<li class="crow">${mark}<span class="fn"><span class="t">${esc(x.name)}</span>${x.assigned ? `<span class="sub">${esc(assignLabel(x))}</span>` : ''}</span><span class="meta">${[timeLabel(x), past && done && rec.at && rec.at[x.id] && rec.at[x.id] !== 'sonradan' ? rec.at[x.id] : ''].filter(Boolean).join(' · ')}</span></li>`;
+      return `<li class="crow">${mark}<span class="fn"><span class="t">${esc(x.name)}</span>${x.assigned ? `<span class="sub">${esc(assignLabel(x))}</span>` : ''}${notePreview(x) ? `<span class="sub">${notePreview(x)}</span>` : ''}</span><span class="meta">${[timeLabel(x), past && done && rec.at && rec.at[x.id] && rec.at[x.id] !== 'sonradan' ? rec.at[x.id] : ''].filter(Boolean).join(' · ')}</span></li>`;
     }).join('') + `</ul>`;
   }
   if (dueTasks.length) {
     h += `<p class="sec">SON TARİHLİ</p><ul class="list">` + dueTasks.map(g =>
-      `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<span class="fn"><span class="t">${esc(g.name)}</span>${g.assigned ? `<span class="sub">${esc(assignLabel(g))}</span>` : ''}</span><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span></li>`).join('') + `</ul>`;
+      `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<span class="fn"><span class="t">${esc(g.name)}</span>${g.assigned ? `<span class="sub">${esc(assignLabel(g))}</span>` : ''}${notePreview(g) ? `<span class="sub">${notePreview(g)}</span>` : ''}</span><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span></li>`).join('') + `</ul>`;
   }
   const plans = plansOn(k);
   if (plans.length) {
@@ -1963,7 +1982,7 @@ async function openGive(item, teamId) {
   $('gpWhat').textContent = `${item.name} · ${when}`;
   $('gpTeam').innerHTML = led.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
   if (teamId && led.some(t => t.id === teamId)) $('gpTeam').value = teamId;
-  $('gpMembers').innerHTML = '';
+  $('gpMembers').innerHTML = ''; $('gpNote').value = '';
   $('givePick').showModal();
   await fillGiveMembers();
 }
@@ -1989,7 +2008,7 @@ $('giveForm').addEventListener('submit', async e => {
     const { data: gid, error } = await sb.rpc('gorev_ver', {
       p_team: $('gpTeam').value, p_uye: id, p_ad: GIVE.name, p_tur: GIVE.type,
       p_gunler: GIVE.days || 127, p_saat: GIVE.time || null, p_bitis: GIVE.time && GIVE.end ? GIVE.end : null,
-      p_sure: GIVE.dur || 0, p_son: GIVE.type === 'general' && GIVE.due ? GIVE.due : null
+      p_sure: GIVE.dur || 0, p_son: GIVE.type === 'general' && GIVE.due ? GIVE.due : null, p_not: $('gpNote').value.trim() || null
     });
     if (error) { err = error; continue; }
     ok++;
@@ -2052,7 +2071,7 @@ $('importFile').addEventListener('change', async e => {
     for (const t of data.tasks) {
       if (!t || typeof t.name !== 'string' || !['daily', 'general'].includes(t.type)) continue;
       const nid = uid(); idMap[t.id] = nid; added++;
-      S.tasks.push({ id: nid, name: t.name.slice(0, 80), type: t.type, dur: Math.max(0, Math.min(600, parseInt(t.dur, 10) || 0)), due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : '', done: !!t.done, doneAt: +t.doneAt || 0, days: (parseInt(t.days, 10) >= 1 && parseInt(t.days, 10) <= 127) ? parseInt(t.days, 10) : 127, time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : '', end: /^\d{2}:\d{2}$/.test(t.end || '') ? t.end : '', created: +t.created || Date.now() });
+      S.tasks.push({ id: nid, name: t.name.slice(0, 80), type: t.type, dur: Math.max(0, Math.min(600, parseInt(t.dur, 10) || 0)), due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : '', done: !!t.done, doneAt: +t.doneAt || 0, days: (parseInt(t.days, 10) >= 1 && parseInt(t.days, 10) <= 127) ? parseInt(t.days, 10) : 127, time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : '', end: /^\d{2}:\d{2}$/.test(t.end || '') ? t.end : '', note: typeof t.note === 'string' ? t.note.slice(0, 500) : '', created: +t.created || Date.now() });
     }
     const m = a => (Array.isArray(a) ? a : []).map(id => idMap[id]).filter(Boolean);
     for (const [k, r] of Object.entries(data.days || {})) {
@@ -2151,7 +2170,7 @@ async function reloadFromServer(first) {
   fillAccount();
   const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed };
   S = Object.assign(blank(), ui);
-  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '' }));
+  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '', note: r.note || '', assignNote: r.assign_note || '' }));
   for (const x of (v.error ? [] : v.data || [])) { const k = S.tasks.find(y => y.id === x.task_id); if (k) { k.by = x.veren || ''; if (x.ekip) k.team = x.ekip; } }
   for (const r of d.data) S.days[r.day] = { done: r.done || [], skip: r.skip || [], at: r.at || {}, total: r.total || 0, frozen: !!r.frozen };
   S.best = PROFILE.best_streak || 0;
