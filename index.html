@@ -118,12 +118,15 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .seg2 button{border:0;background:none;padding:10px 0;font-weight:600;color:var(--ink-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .seg2 button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .add-wrap{display:grid;gap:6px}
-.add-opts{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}
+.add-opts{display:grid;gap:var(--space-2);padding:var(--space-3);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md)}
+.opt-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2)}
+.opt-row.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.opt-row .mini{min-width:0}
+.opt-row .mini input{width:100%}
 .range{display:flex;align-items:center;gap:6px}
 .range input{min-width:0}
 .field .range input{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-md);padding:11px 12px;color:var(--ink)}
 .range span{color:var(--ink-muted)}
-.add-opts .days{flex:1;min-width:0}
 .days.sm button{padding:7px 0;font-size:12px}
 .time-in{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:5px 6px;font:500 13px/18px var(--font-mono);color:var(--ink);min-width:0}
 .members{display:grid;gap:var(--space-3)}
@@ -340,7 +343,7 @@ dialog::backdrop{background:rgba(8,12,18,.45)}
       <div class="seg"><button type="button" data-type="daily" id="segDaily">Günlük</button><button type="button" data-type="general" id="segGeneral">Genel</button></div>
     </div>
     <div class="field" id="fDurWrap"><label for="fDur">SÜRE (DAKİKA, İSTEĞE BAĞLI)</label><input id="fDur" type="number" min="0" max="600" inputmode="numeric"></div>
-    <div class="field" id="fTimeWrap"><span class="lbl">SAAT ARALIĞI (İSTEĞE BAĞLI)</span><div class="range"><input id="fTime" type="time" aria-label="Başlangıç saati"><span>–</span><input id="fEnd" type="time" aria-label="Bitiş saati"></div><span class="hint">Yalnızca başlangıç da yazabilirsin. Saati olan işler sırada saate göre yer alır; bildirimler açıksa başlangıçta hatırlatılır.</span></div>
+    <div class="field" id="fTimeWrap"><span class="lbl">ZAMAN</span><label class="toggle" for="fAllDay"><input type="checkbox" id="fAllDay"><span class="fn"><span class="t">Tüm gün</span><span class="sub">Belli bir saati yok.</span></span></label><div class="range" id="fRange"><input id="fTime" type="time" aria-label="Başlangıç saati"><span>–</span><input id="fEnd" type="time" aria-label="Bitiş saati"></div><span class="hint" id="fRangeHint">Yalnızca başlangıç da yazabilirsin. Saati olan işler sırada saate göre yer alır; bildirimler açıksa başlangıçta hatırlatılır.</span></div>
     <div class="field" id="fDaysWrap"><span class="lbl">GÜNLER</span><div class="days" id="fDays"></div><span class="hint" id="fDaysHint"></span></div>
     <label class="toggle" for="fPoke" id="fPokeWrap"><input type="checkbox" id="fPoke"><span class="fn"><span class="t">Arkadaşlarım bu iş için beni dürtebilsin</span><span class="sub">İşin adı arkadaşlarına görünür; bitirmediysen sana bildirim gönderebilirler.</span></span></label>
     <div class="field" id="fDueWrap"><label for="fDue">SON TARİH (İSTEĞE BAĞLI)</label><input id="fDue" type="date"></div>
@@ -776,8 +779,10 @@ function renderDaily(r, cs) {
         `<li class="row off"><span class="mark" aria-hidden="true"></span><button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span><span class="sub">${[daysLabel(t.days), timeLabel(t)].filter(Boolean).join(' · ')}</span></button>${listEdit === 'daily' ? delCtl(t) : '<span class="meta"></span>'}</li>`).join('') + `</ol>`;
     }
   }
-  h += `<form class="add-wrap" data-form="daily"><div class="add"><input class="name" id="dName" placeholder="Günlük iş ekle" maxlength="80" aria-label="Günlük iş adı" required><input class="dur" id="dDur" type="number" min="0" max="600" inputmode="numeric" placeholder="süre" aria-label="Süre, dakika"><span class="unit">dk</span><button class="btn primary" type="submit">Ekle</button></div>`
-    + `<div class="add-opts"><div class="days sm" role="group" aria-label="Hangi günler">${DAY_NAMES.map((n, i) => `<button type="button" data-adday="${i}" aria-pressed="${!!(addDays & (1 << i))}">${n}</button>`).join('')}</div><div class="range sm"><input class="time-in" id="dTime" type="time" value="${addTime}" aria-label="Başlangıç saati, isteğe bağlı"><span>–</span><input class="time-in" id="dEnd" type="time" value="${addEnd}" aria-label="Bitiş saati, isteğe bağlı"></div></div></form>`;
+  h += `<form class="add-wrap" data-form="daily"><div class="add"><input class="name" id="dName" placeholder="Günlük iş ekle" maxlength="80" aria-label="Günlük iş adı" autocomplete="off" required><button class="btn primary" type="submit">Ekle</button></div>`
+    + `<div class="add-opts"${addOpen ? '' : ' hidden'}><div class="days sm" role="group" aria-label="Hangi günler">${DAY_NAMES.map((n, i) => `<button type="button" data-adday="${i}" aria-pressed="${!!(addDays & (1 << i))}">${n}</button>`).join('')}</div>`
+    + `<div class="opt-row"><label class="mini">Başlangıç<input id="dTime" type="time" value="${addTime}"></label><label class="mini">Bitiş<input id="dEnd" type="time" value="${addEnd}"></label><label class="mini">Süre (dk)<input id="dDur" type="number" min="0" max="600" inputmode="numeric" value="${addDur}"></label></div>`
+    + `<p class="hint">Gün ve saat isteğe bağlı; seçmezsen her gün, saatsiz eklenir.</p></div></form>`;
   if (all.length) h += streakHtml(cs, list);
   const view = $('view-daily');
   const keep = document.activeElement && document.activeElement.id === 'dName';
@@ -987,7 +992,7 @@ function onAction(e) {
 $('view-daily').addEventListener('click', onAction);
 $('view-general').addEventListener('click', onAction);
 // Günlük iş ekleme: hangi günler ve saat (form yeniden çizilse de seçim korunur)
-let addDays = 127, addTime = '', addEnd = '';
+let addDays = 127, addTime = '', addEnd = '', addDur = '', addOpen = false;
 $('view-daily').addEventListener('click', e => {
   const b = e.target.closest('[data-adday]'); if (!b) return;
   const next = addDays ^ (1 << +b.dataset.adday);
@@ -995,7 +1000,13 @@ $('view-daily').addEventListener('click', e => {
   addDays = next;
   b.setAttribute('aria-pressed', String(!!(addDays & (1 << +b.dataset.adday))));
 });
-$('view-daily').addEventListener('input', e => { if (e.target.id === 'dTime') addTime = e.target.value; if (e.target.id === 'dEnd') addEnd = e.target.value; });
+$('view-daily').addEventListener('input', e => { if (e.target.id === 'dTime') addTime = e.target.value; if (e.target.id === 'dEnd') addEnd = e.target.value; if (e.target.id === 'dDur') addDur = e.target.value; });
+// Gün/saat seçenekleri, iş adı yazılmaya başlanınca açılır
+function openAddOpts(e) {
+  if (e.target.id !== 'dName' || addOpen) return;
+  addOpen = true; const o = $('view-daily').querySelector('.add-opts'); if (o) o.hidden = false;
+}
+['focusin', 'click', 'input'].forEach(ev => $('view-daily').addEventListener(ev, openAddOpts));
 // Saat aralığı denetimi: bitiş varsa başlangıç da olmalı ve ondan sonra gelmeli
 function rangeError(st, en) {
   if (en && !st) return 'Bitiş saati için başlangıç saatini de yaz.';
@@ -1010,7 +1021,7 @@ document.addEventListener('submit', e => {
   if (f.dataset.form === 'calAdd') {
     e.preventDefault();
     const name = $('calName').value.trim(); if (!name) return;
-    const st = $('calTime').value, en = $('calEnd').value, re = rangeError(st, en); if (re) { toast(re); return; }
+    const st = calAllDay ? '' : $('calTime').value, en = calAllDay ? '' : $('calEnd').value, re = rangeError(st, en); if (re) { toast(re); return; }
     S.tasks.push({ id: uid(), name, type: 'general', due: calSel, time: st, end: st ? en : '', done: false, created: Date.now() });
     $('calName').value = ''; $('calTime').value = ''; $('calEnd').value = ''; render(); toast('İş bu güne eklendi; Genel sekmesinde de görünür.');
     return;
@@ -1021,7 +1032,7 @@ document.addEventListener('submit', e => {
     const dur = Math.max(0, Math.min(600, parseInt($('dDur').value, 10) || 0));
     const re = rangeError(addTime, addEnd); if (re) { toast(re); return; }
     S.tasks.push({ id: uid(), name, type: 'daily', dur, days: addDays, time: addTime, end: addTime ? addEnd : '', created: Date.now() });
-    addDays = 127; addTime = ''; addEnd = '';
+    addDays = 127; addTime = ''; addEnd = ''; addDur = '';
     $('dName').value = '';
   } else {
     const name = $('gName').value.trim(); if (!name) return;
@@ -1048,6 +1059,11 @@ function applyTheme() {
 
 // ---- düzenleme sayfası ----
 let editId = null, editType = 'daily', delArmed = false, editDays = 127;
+$('fAllDay').addEventListener('change', () => {
+  const on = $('fAllDay').checked;
+  $('fRange').hidden = $('fRangeHint').hidden = on;
+  if (!on) $('fTime').focus();
+});
 function drawDays() {
   $('fDays').innerHTML = DAY_NAMES.map((n, i) => `<button type="button" data-day="${i}" aria-pressed="${!!(editDays & (1 << i))}">${n}</button>`).join('');
   $('fDaysHint').textContent = daysLabel(editDays) + (editDays === 127 ? '' : '. Diğer günler seriyi etkilemez.');
@@ -1075,6 +1091,7 @@ function openSheet(id) {
   editDays = t.days || 127; drawDays();
   $('fPoke').checked = !!t.pokeable;
   $('fTime').value = t.time || ''; $('fEnd').value = t.end || '';
+  $('fAllDay').checked = !t.time; $('fRange').hidden = $('fRangeHint').hidden = !t.time;
   const locked = !!t.assigned;
   $('fName').disabled = locked; $('segDaily').disabled = locked; $('segGeneral').disabled = locked; $('delBtn').hidden = locked;
   $('fLock').hidden = !locked;
@@ -1113,7 +1130,8 @@ $('sheetForm').addEventListener('submit', e => {
   e.preventDefault();
   const t = find(editId); if (!t) return;
   const name = $('fName').value.trim(); if (!name) { $('fName').focus(); return; }
-  const st = $('fTime').value, en = $('fEnd').value;
+  const allDay = $('fAllDay').checked;
+  const st = allDay ? '' : $('fTime').value, en = allDay ? '' : $('fEnd').value;
   if (en && !st) { toast('Bitiş saati için başlangıç saatini de yaz.'); return; }
   if (st && en && en <= st) { toast('Bitiş saati başlangıçtan sonra olmalı.'); return; }
   t.time = st || ''; t.end = st ? (en || '') : '';
@@ -1713,7 +1731,7 @@ $('tmLeave').addEventListener('click', async () => {
 
 // ---- takvim ----
 // Ay görünümü: her günün durumu; bir güne dokununca o günün işleri, gelecekteki günlere tek seferlik iş eklenebilir.
-let calMonth = '', calSel = '';
+let calMonth = '', calSel = '', calAllDay = true;
 const CAL_NAMES = { full: 'tamamlandı', part: 'eksik kaldı', miss: 'yapılmadı', rest: 'iş yoktu', frozen: 'izin günü', plan: 'planlı', open: 'devam ediyor', none: '' };
 function calState(k) {
   const t = today();
@@ -1752,7 +1770,7 @@ function weekHtml() {
     const shown = items.slice(0, 4);
     const list = shown.length ? shown.map(it => {
       const cls = k <= t ? (it.done ? 'ok' : (k < t ? 'no' : '')) : '';
-      return `<span class="wk-it ${cls}">${it.t.time ? `<i>${timeLabel(it.t)}</i>` : ''}<span>${esc(it.t.name)}</span></span>`;
+      return `<span class="wk-it ${cls}">${it.t.time ? `<i>${timeLabel(it.t)}</i>` : it.due ? '<i>tüm gün</i>' : ''}<span>${esc(it.t.name)}</span></span>`;
     }).join('') + (items.length > 4 ? `<span class="wk-more">+${items.length - 4} iş daha</span>` : '') : '<span class="wk-more">İş yok</span>';
     rows += `<button type="button" class="wk-day ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}">`
       + `<span class="wk-date"><small>${WD_SHORT[d.getDay()]}</small><b>${d.getDate()}</b></span><span class="wk-items">${list}</span>`
@@ -1802,11 +1820,13 @@ function calDayHtml(k) {
   }
   if (dueTasks.length) {
     h += `<p class="sec">SON TARİHLİ</p><ul class="list">` + dueTasks.map(g =>
-      `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<span class="t">${esc(g.name)}</span><span class="meta">${g.done ? 'bitti' : timeLabel(g)}</span></li>`).join('') + `</ul>`;
+      `<li class="crow">${g.done ? `<span class="mk ok">${check}</span>` : '<span class="mk plan"></span>'}<span class="t">${esc(g.name)}</span><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span></li>`).join('') + `</ul>`;
   }
   if (!dailyTasks.length && !dueTasks.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
   if (k === shift(t, -1) && s !== 'full' && s !== 'rest' && s !== 'none') h += `<button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`;
-  if (k >= t) h += `<form class="add-wrap" data-form="calAdd"><div class="add"><input class="name" id="calName" maxlength="80" placeholder="Bu güne iş ekle" aria-label="Bu güne iş ekle" required><button class="btn primary" type="submit">Ekle</button></div><div class="add-opts"><span class="hint">Saat aralığı</span><div class="range sm"><input class="time-in" id="calTime" type="time" aria-label="Başlangıç saati"><span>–</span><input class="time-in" id="calEnd" type="time" aria-label="Bitiş saati"></div></div></form>`;
+  if (k >= t) h += `<form class="add-wrap" data-form="calAdd"><div class="add"><input class="name" id="calName" maxlength="80" placeholder="Bu güne iş ekle" aria-label="Bu güne iş ekle" autocomplete="off" required><button class="btn primary" type="submit">Ekle</button></div>`
+    + `<div class="seg" role="group" aria-label="Zaman"><button type="button" data-allday="1" aria-pressed="${calAllDay}">Tüm gün</button><button type="button" data-allday="0" aria-pressed="${!calAllDay}">Saat aralığı</button></div>`
+    + `<div class="opt-row two" id="calRange"${calAllDay ? ' hidden' : ''}><label class="mini">Başlangıç<input id="calTime" type="time"></label><label class="mini">Bitiş<input id="calEnd" type="time"></label></div></form>`;
   return h + `</div>`;
 }
 $('view-calendar').addEventListener('click', e => {
@@ -1814,6 +1834,14 @@ $('view-calendar').addEventListener('click', e => {
   if (cv) { calView = cv.dataset.calview; calMonth = calSel.slice(0, 7); renderCalendar(); return; }
   const wn = e.target.closest('[data-wknav]');
   if (wn) { const step = +wn.dataset.wknav; calSel = step ? shift(calSel, step) : today(); calMonth = calSel.slice(0, 7); renderCalendar(); return; }
+  const ad = e.target.closest('[data-allday]');
+  if (ad) {
+    calAllDay = ad.dataset.allday === '1';
+    ad.parentNode.querySelectorAll('[data-allday]').forEach(b => b.setAttribute('aria-pressed', String(b === ad)));
+    $('calRange').hidden = calAllDay;
+    if (!calAllDay) $('calTime').focus();
+    return;
+  }
   const c = e.target.closest('[data-cal]');
   if (c) { calSel = c.dataset.cal; renderCalendar(); return; }
   const n = e.target.closest('[data-calnav]');
@@ -1952,6 +1980,7 @@ async function boot() {
   showApp();
   touchSeen();
   loadFriends();
+  if (S.ftab === 'teams') loadTeams();
 }
 // Sunucudaki hâli yükler. Uygulamaya dönülünce de çağrılır; ekip başkanının verdiği yeni görevler böyle gelir.
 // Gönderilmemiş değişiklik varsa yerel hâl korunur.
