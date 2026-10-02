@@ -86,7 +86,7 @@ function rel(iso) {
 const cell = iso => iso ? `${rel(iso)}<span class="abs">${absFmt.format(new Date(iso))}</span>` : '<span class="abs">hiç</span>';
 const lastActive = u => Math.max(Date.parse(u.last_sign_in_at || 0) || 0, Date.parse(u.last_seen_at || 0) || 0);
 const has = (q, ...names) => !q || names.some(n => String(n).toLocaleLowerCase('tr').includes(q));
-let users = [], nicks = [], tab = 'users';
+let users = [], nicks = [], ozet = null, tab = 'users';
 
 function draw() {
   const q = $('q').value.trim().toLocaleLowerCase('tr');
@@ -102,9 +102,8 @@ function draw() {
       return `<tr><td class="name">${active ? '<span class="dot" title="Son 24 saatte aktif"></span>' : ''}${esc(u.full_name)}</td><td>${cell(u.last_sign_in_at)}</td><td>${cell(u.last_seen_at)}</td><td>${cell(u.created_at)}</td></tr>`;
     }).join('');
     $('usersNone').hidden = list.length > 0;
-    const day = users.filter(u => Date.now() - lastActive(u) < 24 * 3600e3).length;
     const week = users.filter(u => Date.now() - lastActive(u) < 7 * 24 * 3600e3).length;
-    $('stats').innerHTML = `<span><b>${users.length}</b>kullanıcı</span><span><b>${day}</b>son 24 saatte aktif</span><span><b>${week}</b>son 7 günde aktif</span>`;
+    $('stats').innerHTML = `<span><b>${users.length}</b>kullanıcı</span><span><b>${ozet ? ozet.bugun_is_yapan : 0}</b>bugün iş yapan</span><span><b>${week}</b>son 7 günde aktif</span><span><b>${ozet ? ozet.arkadaslik : 0}</b>arkadaşlık</span>`;
   } else {
     const list = nicks.filter(n => has(q, n.takan, n.hedef, n.lakap));
     $('nickRows').innerHTML = list.map(n =>
@@ -119,7 +118,7 @@ function draw() {
 
 async function load() {
   $('refresh').disabled = true;
-  const [u, n] = await Promise.all([sb.rpc('yonetici_kullanicilar'), sb.rpc('yonetici_lakaplar')]);
+  const [u, n, o] = await Promise.all([sb.rpc('yonetici_kullanicilar'), sb.rpc('yonetici_lakaplar'), sb.rpc('yonetici_ozet')]);
   $('refresh').disabled = false;
   $('loading').hidden = true;
   const error = u.error || n.error;
@@ -129,7 +128,7 @@ async function load() {
     $('err').textContent = error.code === '42501' ? 'Bu sayfa yalnızca yönetici hesabıyla açılır.' : hataMesaji(error);
     return;
   }
-  users = u.data || []; nicks = n.data || [];
+  users = u.data || []; nicks = n.data || []; ozet = o.error ? null : o.data;
   $('err').hidden = true; $('content').hidden = false;
   draw();
 }
