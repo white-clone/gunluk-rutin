@@ -26,8 +26,8 @@
 - [x] Şifre değişiminde mevcut şifre doğrulaması.
 - [x] Günlük iş eklerken gün ve saat seçimi.
 - [x] Ekip kurma, kodla katılma, başkanın üyelere görev vermesi, ekip durumu.
-- [x] Takvim (ay görünümü, gün ayrıntısı, güne iş ekleme), saat aralığı (başlangıç–bitiş), listelerde Düzenle ile silme.
-- [ ] Supabase'te 5-saat-ve-ekip.sql çalıştırılacak, iki Edge Function güncellenecek, sonra main'e push.
+- [x] Takvim (ay ve hafta görünümü, gün ayrıntısı, güne iş ekleme), saat aralığı (başlangıç–bitiş), listelerde Düzenle ile silme.
+- [x] 5-saat-ve-ekip.sql çalıştırıldı, iki Edge Function güncellendi, yayına alındı.
 
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.
