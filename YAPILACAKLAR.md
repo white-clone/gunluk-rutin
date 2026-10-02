@@ -20,6 +20,14 @@
 - [x] Sabah / akşam hatırlatması (pg_cron + Edge Function); akşamki yalnızca iş kaldıysa.
 - [x] Haftalık özet bildirimi (Pazar akşamı).
 
+## E. Saat ve ekipler (supabase/5-saat-ve-ekip.sql)
+- [x] Göreve saat; bugünün sırası saate göre, saat geçince kırmızı.
+- [x] Sabah/akşam hatırlatma saatini kişi seçer; görev saatinde hatırlatma (pg_cron 5 dakikada bir).
+- [x] Şifre değişiminde mevcut şifre doğrulaması.
+- [x] Günlük iş eklerken gün ve saat seçimi.
+- [x] Ekip kurma, kodla katılma, başkanın üyelere görev vermesi, ekip durumu.
+- [ ] Supabase'te 5-saat-ve-ekip.sql çalıştırılacak, iki Edge Function güncellenecek, sonra main'e push.
+
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.
       Authentication → Emails → SMTP Settings. Kurulmadan doğrulama ve şifre sıfırlama

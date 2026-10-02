@@ -3,6 +3,7 @@
 
 -- ---------- Saatler ----------
 alter table public.tasks add column if not exists time time;
+alter table public.tasks add column if not exists end_time time;  -- saat aralığının bitişi (isteğe bağlı)
 alter table public.profiles
   add column if not exists morning_time time not null default '09:00',
   add column if not exists evening_time time not null default '21:00',
@@ -62,8 +63,8 @@ create policy "gorev_guncelle" on public.tasks for update to authenticated
 create policy "gorev_sil" on public.tasks for delete to authenticated
   using (user_id = auth.uid() and assigned_by is null);
 revoke insert, update on public.tasks from authenticated;
-grant insert (id, user_id, name, type, dur, days, pokeable, due, done, done_at, position, time) on public.tasks to authenticated;
-grant update (id, user_id, name, type, dur, days, pokeable, due, done, done_at, position, time) on public.tasks to authenticated;
+grant insert (id, user_id, name, type, dur, days, pokeable, due, done, done_at, position, time, end_time) on public.tasks to authenticated;
+grant update (id, user_id, name, type, dur, days, pokeable, due, done, done_at, position, time, end_time) on public.tasks to authenticated;
 
 -- Ekip kur: kuran kişi başkan ve ilk üye olur
 create or replace function public.ekip_kur(p_ad text)
@@ -115,12 +116,12 @@ $$;
 -- Ekibin bugünkü durumu: her üye ve ona verilmiş ekip görevleri (görevsiz üye tek satır)
 create or replace function public.ekip_durumu(p_team uuid, p_gun date)
 returns table (user_id uuid, full_name text, lider boolean, gorev_id uuid, gorev_adi text, tur text,
-               gunler int, saat time, son_tarih date, bitti boolean)
+               gunler int, saat time, bitis time, son_tarih date, bitti boolean)
 language plpgsql stable security definer set search_path = '' as $$
 begin
   if not public.ekip_uyesi_mi(p_team) then raise exception 'ekip_uyesi_degil' using errcode = '42501'; end if;
   return query
-    select m.user_id, p.full_name, t.leader = m.user_id, k.id, k.name, k.type, k.days, k.time, k.due,
+    select m.user_id, p.full_name, t.leader = m.user_id, k.id, k.name, k.type, k.days, k.time, k.end_time, k.due,
            case when k.id is null then null
                 when k.type = 'general' then k.done
                 else coalesce(k.id::text = any(d.done), false) end
@@ -134,8 +135,9 @@ begin
 end $$;
 
 -- Başkan üyeye görev verir; görev üyenin listesine eklenir
+drop function if exists public.gorev_ver(uuid, uuid, text, text, int, time, int, date);
 create or replace function public.gorev_ver(p_team uuid, p_uye uuid, p_ad text, p_tur text, p_gunler int,
-                                            p_saat time, p_sure int, p_son date)
+                                            p_saat time, p_bitis time, p_sure int, p_son date)
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare gid uuid;
 begin
@@ -146,11 +148,11 @@ begin
     raise exception 'uye_degil';
   end if;
   if char_length(trim(coalesce(p_ad, ''))) = 0 then raise exception 'ad_bos'; end if;
-  insert into public.tasks (user_id, name, type, dur, days, time, due, team_id, assigned_by, position)
+  insert into public.tasks (user_id, name, type, dur, days, time, end_time, due, team_id, assigned_by, position)
   values (p_uye, left(trim(p_ad), 80), case when p_tur = 'general' then 'general' else 'daily' end,
           case when p_tur = 'general' then 0 else greatest(0, least(600, coalesce(p_sure, 0))) end,
           case when p_gunler between 1 and 127 then p_gunler else 127 end,
-          case when p_tur = 'general' then null else p_saat end,
+          p_saat, case when p_saat is not null and p_bitis > p_saat then p_bitis end,
           case when p_tur = 'general' then p_son end,
           p_team, auth.uid(),
           coalesce((select max(position) + 1 from public.tasks where user_id = p_uye), 0))
@@ -195,10 +197,10 @@ returns void language sql security definer set search_path = '' as $$
 $$;
 
 revoke all on function public.ekip_kur(text), public.ekibe_katil(text), public.ekiplerim(), public.ekip_durumu(uuid, date),
-  public.gorev_ver(uuid, uuid, text, text, int, time, int, date), public.ekip_gorev_sil(uuid), public.uye_cikar(uuid, uuid),
+  public.gorev_ver(uuid, uuid, text, text, int, time, time, int, date), public.ekip_gorev_sil(uuid), public.uye_cikar(uuid, uuid),
   public.ekipten_ayril(uuid), public.ekip_sil(uuid) from public;
 grant execute on function public.ekip_kur(text), public.ekibe_katil(text), public.ekiplerim(), public.ekip_durumu(uuid, date),
-  public.gorev_ver(uuid, uuid, text, text, int, time, int, date), public.ekip_gorev_sil(uuid), public.uye_cikar(uuid, uuid),
+  public.gorev_ver(uuid, uuid, text, text, int, time, time, int, date), public.ekip_gorev_sil(uuid), public.uye_cikar(uuid, uuid),
   public.ekipten_ayril(uuid), public.ekip_sil(uuid) to authenticated;
 
 -- ---------- Hatırlatmalar: 5 dakikada bir, kişinin seçtiği saatlere göre ----------
@@ -243,15 +245,21 @@ begin
       and not coalesce(d.frozen, false)
       and coalesce(cardinality(d.done), 0) < pl.n
   union all
-    -- görev saati: planlanan saat geldi ve iş bitmedi
-    select t.user_id, t.name, format('%s · planladığın saat geldi', to_char(t.time, 'HH24:MI')), 'gorev-' || t.id
+    -- görev saati: planlanan saat geldi ve iş bitmedi (günlük iş ya da bugüne tarihli tek seferlik iş)
+    select t.user_id, t.name,
+           case when t.end_time is not null
+             then format('%s–%s arası planladığın iş başlıyor', to_char(t.time, 'HH24:MI'), to_char(t.end_time, 'HH24:MI'))
+             else format('%s · planladığın saat geldi', to_char(t.time, 'HH24:MI')) end,
+           'gorev-' || t.id
     from public.tasks t
     join public.profiles p on p.id = t.user_id
-    where p.remind_tasks and t.type = 'daily' and t.time is not null and (t.days & bit) <> 0
+    where p.remind_tasks and t.time is not null
       and t.time >= t0 and (t.time < t1 or t1 <= t0)
       and exists (select 1 from public.push_subscriptions s where s.user_id = t.user_id)
-      and not exists (select 1 from public.day_logs d where d.user_id = t.user_id and d.day = gun
-                      and (d.frozen or t.id::text = any(d.done)))
+      and ((t.type = 'daily' and (t.days & bit) <> 0
+            and not exists (select 1 from public.day_logs d where d.user_id = t.user_id and d.day = gun
+                            and (d.frozen or t.id::text = any(d.done))))
+        or (t.type = 'general' and t.due = gun and not t.done))
   union all
     -- haftalık özet: Pazar 20:00
     select p.id, 'Haftalık özet'::text,
