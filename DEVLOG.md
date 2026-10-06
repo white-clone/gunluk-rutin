@@ -99,8 +99,19 @@ Netleşenler:
   tepki ve dönüm noktası bildirimleri 5 dakikalık görevde bir önceki 5 dakikada oluşanlar için gider.
 - SQL çalıştırılmadan Akış bölümü, ton seçimi ve yeni bildirim anahtarları görünmez; gerisi çalışır.
 
+## 2026-10-06 — Yönetici paneli: özellik kullanımı
+- Uygulama 36 noktada sayaç tutar (yalnızca sayı; iş adı vb. gönderilmez). 20 sn'de bir ya da uygulama arka plana geçince
+  toplu gönderilir (`kullanim_yaz`). Veritabanında fonksiyon yoksa sayaç kendini kapatır.
+- Sayaçlar: açılış, sekmeler, bitti/atla/sayaç, iş ekleme (tekrarlı/tek), düzenleme, silme, hatırlatma seçme, takvim görünümleri,
+  çizelgeden iş ekleme, dünü düzeltme, izin günü, seri kartı, arkadaş/ekip/akış işlemleri, tepki, dürtme, paylaşma, görev verme,
+  ortak iş, yetki, tema, ton, bildirim açma, yedek.
+- yonetici.html → "Özellikler" sekmesi: 7/30/90 gün; kutucuklar (en çok kullanılan, en çok kişi kullanan, uygulamayı açan, toplam işlem);
+  günlük aktif kişi grafiği (çubuk üzerine gelince/dokununca ayrıntı); özellik tablosu (kullanım, kişi, önceki döneme göre değişim,
+  son kullanım, oran çubuğu), aramayla süzme. "En çok kullanılan" hesabında açılış ve sekme geçişleri sayılmaz.
+- Veritabanı: `supabase/15-ozellik-kullanimi.sql` (feature_usage, kullanim_yaz, yonetici_ozellikler, yonetici_kullanim_gunluk).
+
 ## Sıradaki adımlar
-- 11, 12, 13 ve 14 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
+- 11, 12, 13, 14 ve 15 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
 - Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
 - Ekip müsaitlik görünümü (haftalık çizelgede üyelerin dolu saatleri).
 - Kutlama ve titreşim.

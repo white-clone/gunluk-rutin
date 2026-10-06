@@ -1104,6 +1104,24 @@ function generalHtml() {
   return h;
 }
 
+// ---- özellik kullanımı ----
+// Hangi özelliğin ne kadar kullanıldığı sayılır (yalnızca sayı; içerik gönderilmez) ve yönetici panelinde görünür.
+let TRACK = {}, trackOff = false, trackTimer = null;
+function track(name) {
+  if (trackOff) return;
+  TRACK[name] = (TRACK[name] || 0) + 1;
+  clearTimeout(trackTimer); trackTimer = setTimeout(flushTrack, 20000);
+}
+async function flushTrack() {
+  if (trackOff || !USER || !Object.keys(TRACK).length) return;
+  const batch = TRACK; TRACK = {};
+  const { error } = await sb.rpc('kullanim_yaz', { p_sayac: batch });
+  if (error) {
+    if (/kullanim_yaz|PGRST202|42883/.test(String(error.message) + error.code)) trackOff = true; // veritabanında henüz yok
+    else for (const [k, v] of Object.entries(batch)) TRACK[k] = (TRACK[k] || 0) + v;
+  }
+}
+
 // ---- teşvik ----
 const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
 const MILESTONES = { 3: 'Üç gün üst üste! Alışkanlık böyle başlar.', 7: 'Tam bir hafta! Seri artık senin.', 14: 'İki hafta oldu. Bu iş oturdu.', 21: '21 gün! Artık rutinin bir parçası.', 30: 'Bir ay boyunca hiç bırakmadın.', 50: '50 gün! Çok az kişi buraya gelir.', 100: '100 gün! Efsane bir seri.', 200: '200 gün. Saygılar.', 365: 'Tam bir yıl! İnanılmaz.' };
@@ -1168,6 +1186,7 @@ function celebrate(big, sub, n, festive = true) {
 // Üstteki seri rozetine dokununca seri kartı açılır
 $('streakChip').addEventListener('click', () => {
   if (!loaded) return;
+  track('seri_karti');
   const n = currentStreak();
   celebrate(n ? `${n} günlük seri` : 'Seri henüz başlamadı', n ? `En uzun serin ${S.best} gün.` : 'Bugünün bütün işlerini bitir, ilk çizgi gelsin.', n, false);
 });
@@ -1187,7 +1206,7 @@ function markDone(id) {
   r.skip = r.skip.filter(x => x !== id);
   r.at[id] = nowHM();
   if (S.timer && S.timer.id === id) S.timer = null;
-  justDone = id; buzz(20);
+  justDone = id; buzz(20); track('bitti');
   if (dayComplete(today())) {
     const n = currentStreak();
     const T = TONE[tone()];
@@ -1207,12 +1226,14 @@ function onAction(e) {
       break;
     case 'done': markDone(id); break;
     case 'skip':
+      track('atla');
       if (!r.skip.includes(id)) r.skip.push(id);
       if (S.timer && S.timer.id === id) S.timer = null;
       break;
     case 'unskip': r.skip = []; break;
     case 'start': {
       const cur = currentTask(r); if (!cur) break;
+      track('sayac');
       const left = S.timer ? S.timer.left : cur.dur * 60;
       S.timer = { id: cur.id, day: today(), running: true, end: Date.now() + left * 1000, left, fired: false };
       try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch (err) {}
@@ -1226,14 +1247,14 @@ function onAction(e) {
     case 'enableNotif': enablePush().catch(err => toast(hataMesaji(err))).finally(updateNotifUi); return;
     case 'notifLater': S.notifLater = today(); break;
     case 'freezeY':
-      if (freezesLeft(shift(today(), -1)) > 0) { setFrozen(shift(today(), -1), true); toast(`Dün izin günü sayıldı. Serin ${currentStreak()} gün.`); }
+      if (freezesLeft(shift(today(), -1)) > 0) { setFrozen(shift(today(), -1), true); track('izin_gunu'); toast(`Dün izin günü sayıldı. Serin ${currentStreak()} gün.`); }
       break;
     case 'freezeT':
-      if (freezesLeft() > 0) { setFrozen(today(), true); S.timer = null; toast('Bugün izin günü. Serin bozulmaz.'); }
+      if (freezesLeft() > 0) { setFrozen(today(), true); S.timer = null; track('izin_gunu'); toast('Bugün izin günü. Serin bozulmaz.'); }
       break;
     case 'unfreezeT': setFrozen(today(), false); break;
-    case 'samples': SAMPLES.forEach(([name, dur]) => S.tasks.push({ id: uid(), name, type: 'daily', dur, created: Date.now() })); break;
-    case 'gtoggle': { const t = find(id); if (t) { t.done = !t.done; t.doneAt = t.done ? Date.now() : 0; } break; }
+    case 'samples': track('ornek_gorev'); SAMPLES.forEach(([name, dur]) => S.tasks.push({ id: uid(), name, type: 'daily', dur, created: Date.now() })); break;
+    case 'gtoggle': { const t = find(id); if (t) { t.done = !t.done; t.doneAt = t.done ? Date.now() : 0; if (t.done) { track('bitti'); buzz(20); } } break; }
     case 'listEdit': listEdit = listEdit === b.dataset.list ? '' : b.dataset.list; break;
     case 'delTask': askDelete(id); return;
     case 'clearDone': S.tasks = S.tasks.filter(t => !(t.type === 'general' && t.done)); toast('Tamamlananlar temizlendi.'); break;
@@ -1259,7 +1280,7 @@ document.addEventListener('submit', e => {
 });
 document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b || !loaded) return;
-  S.tab = b.dataset.tab; render();
+  S.tab = b.dataset.tab; track('sekme_' + S.tab); render();
   if (S.tab === 'friends') { loadFriends(); if (S.ftab === 'teams') loadTeams(); }
 });
 // Mesaj tonu seçimi
@@ -1270,6 +1291,7 @@ function drawTone() {
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-tone]'); if (!b || !PROFILE) return;
+  track('ton');
   const old = PROFILE.message_tone; PROFILE.message_tone = b.dataset.tone; drawTone();
   const { error } = await sb.from('profiles').update({ message_tone: b.dataset.tone }).eq('id', USER.id);
   if (error) { PROFILE.message_tone = old; drawTone(); toast(hataMesaji(error)); return; }
@@ -1279,7 +1301,7 @@ document.addEventListener('click', async e => {
 function drawThemeSeg() { document.querySelectorAll('[data-theme-set]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === S.theme))); }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-theme-set]'); if (!b) return;
-  S.theme = b.dataset.themeSet;
+  S.theme = b.dataset.themeSet; track('tema');
   applyTheme(); drawThemeSeg();
   if (loaded) render(); else try { localStorage.setItem(UI_KEY, JSON.stringify({ theme: S.theme })); } catch (e) {}
 });
@@ -1378,7 +1400,7 @@ $('sheetForm').addEventListener('submit', e => {
   t.name = name; t.type = editType;
   if (editType === 'daily') { t.dur = Math.max(0, Math.min(600, parseInt($('fDur').value, 10) || 0)); t.days = editDays; t.pokeable = $('fPoke').checked; delete t.due; delete t.done; }
   else { t.due = $('fDue').value || ''; t.done = !!t.done; }
-  $('sheet').close(); render();
+  $('sheet').close(); track('is_duzenle'); render();
   if (!t.assigned) applyShares(t.id, $('fShare'));
 });
 
@@ -1435,6 +1457,8 @@ $('addForm').addEventListener('submit', e => {
     ? Object.assign(base, { type: 'daily', dur: Math.max(0, Math.min(600, parseInt($('aDur').value, 10) || 0)), days: addDays })
     : Object.assign(base, { type: 'general', due: $('aDue').value || '', done: false });
   S.tasks.push(t);
+  track(t.type === 'daily' ? 'is_ekle_tekrarli' : 'is_ekle_tek');
+  if (t.time && t.remind > 0) track('hatirlatma_sec');
   if (S.tab === 'calendar' && t.due) { calSel = t.due; calMonth = t.due.slice(0, 7); }
   const share = !!$('aShare').querySelector('input:checked');
   $('addSheet').close(); render();
@@ -1535,13 +1559,13 @@ async function addFriend(form) {
   const { data, error } = await sb.rpc('arkadas_ekle', { p_kod: code });
   btn.disabled = false;
   if (error) { toast(hataMesaji(error)); return; }
-  toast(FR_MSG[data] || 'İstek gönderildi.');
+  toast(FR_MSG[data] || 'İstek gönderildi.'); track('arkadas_ekle');
   if (data === 'gonderildi' || data === 'kabul') $('fCode').value = '';
   loadFriends();
 }
 $('view-friends').addEventListener('click', e => {
   const ft = e.target.closest('[data-ftab]');
-  if (ft) { S.ftab = ft.dataset.ftab; render(); if (S.ftab === 'teams') loadTeams(); if (S.ftab === 'feed') loadFeed(); return; }
+  if (ft) { S.ftab = ft.dataset.ftab; track(S.ftab === 'feed' ? 'akis' : S.ftab === 'teams' ? 'ekipler' : 'arkadaslar'); render(); if (S.ftab === 'teams') loadTeams(); if (S.ftab === 'feed') loadFeed(); return; }
   const rq = e.target.closest('[data-rxq]');
   if (rq) { react(rq.dataset.rxq, 'alkis'); return; }
   const rb = e.target.closest('[data-rx]');
@@ -1781,7 +1805,7 @@ async function enablePush() {
   if (error) throw error;
   subSaved = true;
   reg.showNotification('Günlük Rutin', { body: 'Bildirimler bu cihazda açıldı.', icon: 'ikon-192.png', badge: 'ikon-rozet.png', tag: 'deneme' });
-  toast('Bildirimler açıldı.');
+  toast('Bildirimler açıldı.'); track('bildirim_ac');
   return true;
 }
 // Ana ekrandaki "bildirimleri aç" kartı
@@ -1892,11 +1916,11 @@ async function react(id, emoji, note, keep) {
   if (keep) rxNoteOpen = '';
   else if (next && !old.tepkim) rxNoteOpen = id;
   else if (!next) rxNoteOpen = '';
-  if (next) buzz(15);
+  if (next) { buzz(15); track('tepki'); }
   renderFriends();
   const { error } = await sb.rpc('tepki_ver', { p_event: id, p_emoji: next, p_not: next ? (x.notum || null) : null });
   if (error) { Object.assign(x, old); renderFriends(); toast(hataMesaji(error)); return; }
-  if (keep) toast('Notun gönderildi.');
+  if (keep) { toast('Notun gönderildi.'); track('tepki_not'); }
   else if (next && S.ftab !== 'feed') toast(`${RX[next].e} gönderildi. Akış'tan değiştirebilirsin.`);
 }
 
@@ -1940,6 +1964,7 @@ $('pokeBox').addEventListener('click', async e => {
   if (error) { b.disabled = false; toast(pokeError(error)); return; }
   const r = await sb.functions.invoke('durt-bildir', { body: { poke_id: id } });
   const n = r.data && r.data.gonderildi;
+  track('durt');
   toast(n ? 'Dürtüldü, bildirim gitti.' : 'Dürtüldü. Arkadaşın bildirimleri açmamış; uygulamaya girince görecek.');
   $('pokeNote').value = ''; b.textContent = 'Dürtüldü';
 });
@@ -2005,7 +2030,7 @@ async function teamSubmit(form) {
     const { data, error } = await sb.rpc('ekibe_katil', { p_kod: code });
     btn.disabled = false;
     if (error) { toast(teamError(error)); return; }
-    toast(TEAM_MSG[data] || 'Ekibe katıldın.');
+    toast(TEAM_MSG[data] || 'Ekibe katıldın.'); if (data === 'katildi') track('ekibe_katil');
     if (data === 'katildi') $('tCode').value = '';
   }
   loadTeams();
@@ -2126,7 +2151,7 @@ async function memberTap(id, name) {
     if (!await confirmBox(`${name} arkadaş olarak eklensin mi?`, 'Arkadaşlık isteği gönderilir. Kabul edince Arkadaşlar listende görünür.', 'İstek gönder', false)) return;
     const { data, error } = await sb.rpc('ekipten_arkadas_ekle', { p_team: TEAM.id, p_uye: id });
     if (error) { toast(teamError(error)); return; }
-    toast(FR_MSG[data] || 'İstek gönderildi.');
+    toast(FR_MSG[data] || 'İstek gönderildi.'); track('ekipten_arkadas');
     await loadFriends();
   }
   if (TEAM && $('teamSheet').open) drawTeamBody();
@@ -2154,7 +2179,7 @@ $('newTeamForm').addEventListener('submit', async e => {
   const { error } = await sb.rpc('ekip_kur', { p_ad: name, p_uyeler: ids });
   $('ntSave').disabled = false;
   if (error) { toast(teamError(error)); return; }
-  $('newTeam').close();
+  $('newTeam').close(); track('ekip_kur');
   toast(ids.length ? `"${name}" kuruldu, ${ids.length} arkadaşın eklendi.` : `"${name}" kuruldu. Kodunu paylaşarak kişileri davet et.`);
   S.ftab = 'teams'; loadTeams();
 });
@@ -2173,6 +2198,7 @@ $('tmBody').addEventListener('click', async e => {
     yt.disabled = true;
     const { error } = await sb.rpc('yetki_ver', { p_team: TEAM.id, p_uye: yt.dataset.yetki, p_yetkili: on });
     if (error) { yt.disabled = false; toast(teamError(error)); return; }
+    if (on) track('yetki_ver');
     toast(on ? `${name} artık yetkili.` : `${name} kişisinin yetkisi alındı.`);
     loadTeamBody();
     return;
@@ -2257,7 +2283,7 @@ $('tmBody').addEventListener('submit', async e => {
   btn.disabled = false;
   if (error) { toast(teamError(error)); return; }
   sb.functions.invoke('durt-bildir', { body: { gorev_id: id } }).catch(() => {});
-  toast('Görev verildi.');
+  toast('Görev verildi.'); track('gorev_ver');
   if (f.dataset.assign === USER.id) reloadFromServer();
   loadTeamBody();
 });
@@ -2304,6 +2330,7 @@ $('ttForm').addEventListener('submit', async e => {
   $('ttSave').disabled = false;
   if (error) { toast(teamError(error)); return; }
   $('ttSheet').close();
+  if (!ttEdit) track('ortak_is_ekle');
   toast(ttEdit ? 'Ortak iş güncellendi.' : `"${name}" ekibe eklendi.`);
   loadTeamBody(); loadShares();
 });
@@ -2320,7 +2347,7 @@ async function toggleTT(id, btn) {
   const bitti = !x.done;
   const { error } = await sb.rpc('ortak_is_bitir', { p_id: id, p_bitti: bitti });
   if (error) { if (btn) btn.disabled = false; toast(teamError(error)); return; }
-  if (bitti) { buzz(25); toast(`"${x.name}" bitti. Eline sağlık!`); }
+  if (bitti) { buzz(25); track('ortak_is_bitir'); toast(`"${x.name}" bitti. Eline sağlık!`); }
   if (TEAM && $('teamSheet').open) loadTeamBody();
   loadShares();
 }
@@ -2485,14 +2512,14 @@ function calDayHtml(k) {
 $('view-calendar').addEventListener('change', async e => {
   const sel = e.target.closest('[data-planrem]'); if (!sel) return;
   const id = sel.dataset.planrem, dk = remindParse(sel.value), old = PLAN_REM.get(id);
-  PLAN_REM.set(id, dk);
+  PLAN_REM.set(id, dk); track('hatirlatma_sec');
   const { error } = await sb.rpc('plan_hatirlat', { p_task: id, p_dk: dk });
   if (error) { PLAN_REM.set(id, old); sel.value = remindVal(old); toast(hataMesaji(error)); return; }
   toast(dk === null ? 'Bu plan için hatırlatma kapandı.' : `Bu plan ${remindName(dk).toLocaleLowerCase('tr')} hatırlatılacak.`);
 });
 $('view-calendar').addEventListener('click', e => {
   const cv = e.target.closest('[data-calview]');
-  if (cv) { calView = cv.dataset.calview; calMonth = calSel.slice(0, 7); renderCalendar(); return; }
+  if (cv) { calView = cv.dataset.calview; track('takvim_' + calView); calMonth = calSel.slice(0, 7); renderCalendar(); return; }
   const wn = e.target.closest('[data-wknav]');
   if (wn) { const step = +wn.dataset.wknav; calSel = step ? shift(calSel, step) : today(); calMonth = calSel.slice(0, 7); renderCalendar(); return; }
   const ad = e.target.closest('[data-addday]');
@@ -2504,6 +2531,7 @@ $('view-calendar').addEventListener('click', e => {
     calSel = k; calMonth = k.slice(0, 7);
     if (k < today()) { renderCalendar(); return; }
     renderCalendar();
+    track('takvim_saat');
     openAdd('general', k, fromMin(Math.min(m, 23 * 60)), fromMin(Math.min(m + 60, 23 * 60 + 59)));
     return;
   }
@@ -2619,6 +2647,7 @@ async function applyShares(id, box) {
   for (const f of fD.add) if (await run('arkadasla_paylas', { p_task: id, p_friend: f }, added, friendName(f))) { if (!FSHARES.has(id)) FSHARES.set(id, new Set()); FSHARES.get(id).add(f); friendAdded = true; }
   for (const f of fD.del) if (await run('arkadas_paylasimi_kaldir', { p_task: id, p_friend: f }, removed, friendName(f))) (FSHARES.get(id) || new Set()).delete(f);
   // Arkadaşlara "seninle bir plan paylaştı" bildirimi
+  if (added.length) track('paylas');
   if (friendAdded) sb.functions.invoke('durt-bildir', { body: { plan_id: id } }).catch(() => {});
   if (err) toast(teamError(err));
   else if (added.length && !removed.length) toast(`${added.join(', ')} ile paylaşıldı.`);
@@ -2638,7 +2667,7 @@ function copyPlan(id, k) {
     if (PLAN_REM.get(id) !== null) { PLAN_REM.set(id, null); sb.rpc('plan_hatirlat', { p_task: id, p_dk: null }).then(() => {}, () => {}); }
   }
   render();
-  toast(`"${p.name}" listene eklendi.`);
+  toast(`"${p.name}" listene eklendi.`); track('plan_kopyala');
 }
 
 // ---- işi ekip üyesine görev olarak verme ----
@@ -2692,6 +2721,7 @@ $('giveForm').addEventListener('submit', async e => {
   $('gpSave').disabled = false;
   if (!ok) { toast(teamError(err)); return; }
   $('givePick').close();
+  track('gorev_ver');
   toast(ok === 1 ? 'Görev verildi; kişinin takvimine düştü.' : `${ok} kişiye görev verildi.`);
   if (TEAM && $('teamSheet').open) loadTeamBody();
 });
@@ -2721,7 +2751,7 @@ async function askDelete(id, after) {
   if (!await confirmBox(`"${t.name}" silinsin mi?`, parts.join(' '))) return false;
   forgetToday(id); S.tasks = S.tasks.filter(x => x.id !== id);
   if (after) after();
-  render(); toast(`"${t.name}" silindi.`);
+  track('is_sil'); render(); toast(`"${t.name}" silindi.`);
   return true;
 }
 // ---- dünü düzeltme ----
@@ -2743,7 +2773,7 @@ $('yForm').addEventListener('submit', e => {
   const ids = [...$('yList').querySelectorAll('input:checked')].map(i => i.value);
   r.done = ids; r.skip = r.skip.filter(id => !ids.includes(id));
   for (const id of ids) if (!r.at[id]) r.at[id] = 'sonradan';
-  $('ySheet').close(); render();
+  $('ySheet').close(); track('dunu_duzelt'); render();
   toast(dayComplete(y) ? `Dün tamamlandı. Serin ${currentStreak()} gün.` : 'Dün güncellendi.');
 });
 async function touchSeen() {
@@ -2756,6 +2786,7 @@ async function touchSeen() {
 
 // ---- yedek ----
 $('exportBtn').addEventListener('click', () => {
+  track('yedek_indir');
   const data = { v: 1, tasks: S.tasks, days: S.days, best: S.best };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -2786,7 +2817,7 @@ $('importFile').addEventListener('change', async e => {
       cur.total = Math.max(cur.total || 0, parseInt(r.total, 10) || 0);
     }
     S.best = Math.max(S.best, parseInt(data.best, 10) || 0);
-    render(); toast(`Yedekten ${added} görev eklendi.`);
+    track('yedek_yukle'); render(); toast(`Yedekten ${added} görev eklendi.`);
   } catch (err) { toast('Bu dosya bir Günlük Rutin yedeği değil.'); }
   e.target.value = '';
 });
@@ -2820,7 +2851,7 @@ setInterval(() => {
 }, 1000);
 document.addEventListener('visibilitychange', () => {
   if (!loaded) return;
-  if (document.hidden) { clearTimeout(syncTimer); sync(); }
+  if (document.hidden) { clearTimeout(syncTimer); sync(); flushTrack(); }
   else { reloadFromServer().then(loadFeed); touchSeen(); loadFriends(); loadShares(); }
 });
 
@@ -2829,6 +2860,7 @@ function showApp() {
   $('loading').hidden = true;
   render();
 }
+let opened = false;
 async function boot() {
   applyTheme();
   const { data: { session } } = await sb.auth.getSession();
@@ -2848,6 +2880,7 @@ async function boot() {
     return;
   }
   showApp();
+  if (!opened) { opened = true; track('acilis'); }
   touchSeen();
   loadFriends();
   if (S.ftab === 'teams') loadTeams();

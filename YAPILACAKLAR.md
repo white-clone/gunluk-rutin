@@ -45,6 +45,10 @@
 - [x] Akış (Arkadaşlar altında), tepkiler, tebrik düğmesi, mesaj tonu, kutlama kartı, yeni bildirimler.
 - [ ] 14-akis-ve-tepki.sql Supabase'de çalıştırılacak (13'ten sonra).
 
+## J. Yönetici: özellik kullanımı
+- [x] Uygulamada özellik sayaçları, panelde Özellikler sekmesi.
+- [ ] 15-ozellik-kullanimi.sql Supabase'de çalıştırılacak (14'ten sonra).
+
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.
       Authentication → Emails → SMTP Settings. Kurulmadan doğrulama ve şifre sıfırlama
