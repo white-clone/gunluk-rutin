@@ -171,6 +171,8 @@ button.cal-open:hover .t{text-decoration:underline;text-underline-offset:3px}
 .check .sub{font-size:13px;line-height:18px;color:var(--ink-muted)}
 .member{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:var(--space-3)}
 .member .frow{padding:0}
+button.mem{border:0;background:none;padding:4px 0;text-align:left;color:inherit;font:inherit;cursor:pointer;min-height:44px;align-content:center}
+.mem .add-fr{color:var(--accent);font-weight:600}
 .tag{display:inline-block;font:600 11px/16px var(--font-sans);letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);border-radius:var(--radius-pill);padding:0 8px;margin-left:4px;vertical-align:1px}
 .list.tlist{padding-left:48px}
 .tlist .prow{min-height:36px;padding:4px 0}
@@ -1760,6 +1762,7 @@ async function loadTeamBody() {
   if (error) { $('tmBody').innerHTML = `<div class="msg err">${esc(teamError(error))}</div>`; return; }
   TEAM_ROWS = data || [];
   drawTeamBody();
+  if (FR === null) { await ensureFriends(); if (TEAM === team) drawTeamBody(); }
 }
 function drawTeamBody() {
   const members = [];
@@ -1775,7 +1778,9 @@ function drawTeamBody() {
     const done = td.filter(g => g.bitti).length;
     const prog = td.length ? `bugün ${done}/${td.length}` : 'bugün ekip görevi yok';
     let h = `<div class="member"><div class="frow"><span class="av" aria-hidden="true">${esc(initials(m.full_name))}</span>`
-      + `<span class="fn"><span class="t">${esc(m.full_name)}${m.lider ? ' <span class="tag">başkan</span>' : ''}</span><span class="sub">${prog}</span></span>`
+      + (m.user_id === USER.id
+        ? `<span class="fn"><span class="t">${esc(m.full_name)}${m.lider ? ' <span class="tag">başkan</span>' : ''}</span><span class="sub">${prog} · sen</span></span>`
+        : `<button class="fn mem" type="button" data-member="${m.user_id}" data-name="${esc(m.full_name)}"><span class="t">${esc(m.full_name)}${m.lider ? ' <span class="tag">başkan</span>' : ''}</span><span class="sub">${prog} · ${relLabel(m.user_id)}</span></button>`)
       + (TEAM.lider_mi && !m.lider ? `<button class="btn ghost sm" type="button" data-kick="${m.user_id}">Çıkar</button>` : '') + `</div>`;
     if (m.tasks.length) {
       h += `<ul class="list tlist">` + m.tasks.map(g => {
@@ -1787,6 +1792,29 @@ function drawTeamBody() {
     if (TEAM.lider_mi) h += `<button class="link" type="button" data-give="${m.user_id}">+ Görev ver</button><div data-slot="${m.user_id}"></div>`;
     return h + `</div>`;
   }).join('') + (TEAM.lider_mi ? `<div class="member"><button class="link" type="button" data-addfriends>+ Arkadaşlarını ekibe ekle</button><div data-addslot></div></div>` : '');
+}
+// Ekip üyesiyle arkadaşlık durumu; dokununca arkadaş eklenir ya da arkadaşın penceresi açılır
+function relLabel(id) {
+  const f = (FR || []).find(x => x.friend_id === id);
+  if (!f) return FR === null ? '' : '<span class="add-fr">+ Arkadaş ekle</span>';
+  if (f.status === 'accepted') return 'arkadaşın';
+  return f.gelen ? '<span class="add-fr">seni eklemek istiyor · kabul et</span>' : 'istek gönderildi';
+}
+async function memberTap(id, name) {
+  await ensureFriends();
+  const f = (FR || []).find(x => x.friend_id === id);
+  if (f && f.status === 'accepted') { openFriend(f.id); return; }
+  if (f && !f.gelen) { toast(`${name} kişisine istek gönderdin, yanıt bekleniyor.`); return; }
+  if (f && f.gelen) {
+    if (await confirmBox(`${name} seni arkadaş olarak eklemek istiyor`, 'Kabul edersen birbirinizin serisini görür, işlerinizi paylaşabilirsiniz.', 'Kabul et', false)) await friendCall('arkadas_yanit', { p_id: f.id, p_kabul: true }, 'Arkadaş eklendi.');
+  } else {
+    if (!await confirmBox(`${name} arkadaş olarak eklensin mi?`, 'Arkadaşlık isteği gönderilir. Kabul edince Arkadaşlar listende görünür.', 'İstek gönder', false)) return;
+    const { data, error } = await sb.rpc('ekipten_arkadas_ekle', { p_team: TEAM.id, p_uye: id });
+    if (error) { toast(teamError(error)); return; }
+    toast(FR_MSG[data] || 'İstek gönderildi.');
+    await loadFriends();
+  }
+  if (TEAM && $('teamSheet').open) drawTeamBody();
 }
 // Arkadaş seçme listesi (lakabı varsa lakabıyla); hariç tutulanlar listede görünmez
 function friendChecks(exclude = []) {
@@ -1816,6 +1844,8 @@ $('newTeamForm').addEventListener('submit', async e => {
   S.ftab = 'teams'; loadTeams();
 });
 $('tmBody').addEventListener('click', async e => {
+  const mem = e.target.closest('[data-member]');
+  if (mem) { memberTap(mem.dataset.member, mem.dataset.name); return; }
   if (e.target.closest('[data-addfriends]')) {
     const slot = $('tmBody').querySelector('[data-addslot]');
     if (slot.innerHTML) { slot.innerHTML = ''; return; }
@@ -2203,11 +2233,12 @@ $('giveForm').addEventListener('submit', async e => {
 });
 
 // ---- silme onayı ----
-// Ekranda onay penceresi açar; kullanıcı Sil derse true döner.
-function confirmBox(title, text, ok = 'Sil') {
+// Ekranda onay penceresi açar; kullanıcı onaylarsa true döner.
+function confirmBox(title, text, ok = 'Sil', danger = true) {
   return new Promise(resolve => {
     const d = $('confirmBox');
     $('cfTitle').textContent = title; $('cfText').textContent = text; $('cfYes').textContent = ok;
+    $('cfYes').className = danger ? 'btn danger armed' : 'btn primary';
     d.returnValue = '';
     d.addEventListener('close', () => resolve(d.returnValue === 'evet'), { once: true });
     d.showModal();

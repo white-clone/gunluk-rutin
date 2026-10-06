@@ -16,7 +16,15 @@ Yapılan değişiklikler:
 - Hesap penceresindeki yuvarlak avatarın kare görünmesi düzeltildi.
 - Service worker önbellek sürümü v2.
 
+## 2026-10-06 — Ekipten arkadaş ekleme
+- Ekip penceresinde bir üyeye dokununca: arkadaş değilse onay sorulur ve istek gider (kod gerekmez);
+  arkadaşsa arkadaş penceresi açılır; o istek gönderdiyse kabul etme sorulur; istek bekliyorsa bilgi verilir.
+- Üye satırında durum yazar: arkadaşın / istek gönderildi / + Arkadaş ekle / sen.
+- Yeni veritabanı fonksiyonu: `supabase/11-ekipten-arkadas.sql` (`ekipten_arkadas_ekle`). Supabase'de çalıştırılmadan istek gönderme hata verir.
+- Onay penceresi silme dışı işler için de kullanılabiliyor (renkli düğme).
+
 ## Sıradaki adımlar
+- 11-ekipten-arkadas.sql Supabase SQL Editor'de çalıştırılacak.
 - 4: Haftalık görünümde saat çizelgesi.
 - 6: Kaydırma hareketleri (sağa: bitti, sola: paylaş/sil).
 - 7: Bitti animasyonu, titreşim, 7/30/100 gün kutlaması.

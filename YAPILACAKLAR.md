@@ -29,6 +29,10 @@
 - [x] Takvim (ay ve hafta görünümü, gün ayrıntısı, güne iş ekleme), saat aralığı (başlangıç–bitiş), listelerde Düzenle ile silme.
 - [x] 5-saat-ve-ekip.sql çalıştırıldı, iki Edge Function güncellendi, yayına alındı.
 
+## F. Ekipten arkadaş
+- [x] Ekip penceresinde üyeye dokunarak arkadaşlık isteği (supabase/11-ekipten-arkadas.sql).
+- [ ] 11-ekipten-arkadas.sql Supabase'de çalıştırılacak.
+
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.
       Authentication → Emails → SMTP Settings. Kurulmadan doğrulama ve şifre sıfırlama
