@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="Rutin">
 <style>
 /* Tek sütun telefon düzeni: başlık + seri, sekmeler, şu anki adım kartı, sıra listesi, seri bölümü */
-.app{max-width:440px;margin:0 auto;padding-block:var(--space-6) calc(var(--nav-h) + 72px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
+.app{max-width:440px;margin:0 auto;padding-block:var(--space-6) calc(96px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
 .app>*,.app section>div>*{min-width:0}
 
 /* başlık */
@@ -30,20 +30,16 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .icon-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-content:center;color:var(--ink-muted);padding:0}
 .avatar{font:600 13px/1 var(--font-sans);color:var(--accent);background:var(--accent-soft);border-color:transparent}
 
-/* alt sekme çubuğu */
-:root{--nav-h:64px}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--surface);border-top:1px solid var(--line);padding:4px max(8px,calc((100% - 440px) / 2)) env(safe-area-inset-bottom,0px)}
-.tab{border:0;background:transparent;min-height:var(--nav-h);padding:6px 0;font-size:12px;line-height:16px;font-weight:600;min-width:0;color:var(--ink-muted);display:grid;justify-items:center;align-content:center;gap:2px}
-.tab .ti{position:relative;display:grid;place-content:center;width:56px;height:30px;border-radius:var(--radius-pill)}
-.tab[aria-selected="true"]{color:var(--ink)}
-.tab[aria-selected="true"] .ti{background:var(--accent-soft);color:var(--accent)}
-.cnt{position:absolute;top:-4px;left:34px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--radius-pill);background:var(--accent);color:var(--on-accent);font:600 11px/18px var(--font-mono);text-align:center}
-.cnt:empty{display:none}
+/* sekmeler */
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--surface-2);border-radius:var(--radius-pill);padding:4px}
+.tab{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;min-height:44px;font-size:14px;font-weight:600;min-width:0;color:var(--ink-muted);display:flex;justify-content:center;align-items:center;gap:4px}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.cnt{font:500 13px/22px var(--font-mono);color:var(--ink-muted)}
 
 /* ekleme düğmesi */
-.fab{position:fixed;z-index:6;right:max(16px,calc((100% - 440px) / 2 + 16px));bottom:calc(var(--nav-h) + 20px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:18px;border:0;background:var(--accent);color:var(--on-accent);display:grid;place-content:center;padding:0;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.fab{position:fixed;z-index:6;right:max(16px,calc((100% - 440px) / 2 + 16px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:18px;border:0;background:var(--accent);color:var(--on-accent);display:grid;place-content:center;padding:0;box-shadow:0 6px 18px rgba(0,0,0,.22)}
 .fab:active{transform:scale(.95)}
-.toast{bottom:calc(var(--nav-h) + 92px + env(safe-area-inset-bottom,0px))}
+.toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))}
 .seg.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .ic{display:inline-flex;align-items:center;gap:3px;color:var(--ink-muted)}
 .ic svg{flex:none}
@@ -90,7 +86,6 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .cd .dot,.cal-legend .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--timer)}
 .dot.team{background:var(--accent)}
 .mk.team{border-color:var(--accent);background:var(--accent-soft)}
-.wk-it.team span{color:var(--accent)}
 .share-box{display:grid;gap:var(--space-2)}
 .share-box .eyebrow{margin-top:4px}
 .cal-legend{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center;font-size:12px;color:var(--ink-muted)}
@@ -98,26 +93,42 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .cal-legend .dot{position:static;transform:none}
 .lg{width:12px;height:12px;border-radius:3px;display:inline-block}
 .lg.full{background:var(--done)}.lg.part{background:var(--done-soft);box-shadow:inset 0 0 0 1.5px var(--done)}.lg.frozen{background:repeating-linear-gradient(135deg,var(--surface-2) 0 3px,var(--accent-soft) 3px 6px)}
-.wk{display:grid;gap:6px}
-.wk-day{display:grid;grid-template-columns:44px minmax(0,1fr) 10px;gap:var(--space-3);align-items:start;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-md);padding:10px 12px;color:var(--ink)}
-.wk-day.today{border-color:var(--accent)}
-.wk-day.sel{outline:2px solid var(--ink);outline-offset:1px}
-.wk-day.none,.wk-day.rest{background:transparent}
-.wk-date{display:grid;justify-items:center;line-height:1.1}
-.wk-date small{font:600 11px/16px var(--font-sans);letter-spacing:.04em;color:var(--ink-muted)}
-.wk-date b{font:500 20px/26px var(--font-mono)}
-.wk-items{display:grid;gap:3px;min-width:0}
-.wk-it{display:flex;gap:6px;font-size:14px;line-height:20px;min-width:0}
-.wk-it span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wk-it i{font:500 12px/20px var(--font-mono);font-style:normal;color:var(--ink-muted);flex:none}
-.wk-it.ok span{text-decoration:line-through;color:var(--ink-muted)}
-.wk-it.no span{color:var(--streak)}
-.wk-more{font-size:13px;color:var(--ink-muted)}
-.wk-st{width:10px;height:10px;border-radius:50%;margin-top:6px;background:transparent}
-.wk-day.full .wk-st{background:var(--done)}
-.wk-day.part .wk-st{box-shadow:inset 0 0 0 2px var(--done)}
-.wk-day.miss .wk-st{background:var(--streak)}
-.wk-day.frozen .wk-st{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
+/* haftalık saat çizelgesi */
+.tg{--hh:44px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface);overflow:hidden}
+.tg-row{display:grid;grid-template-columns:34px repeat(7,minmax(0,1fr))}
+.tg-head{border-bottom:1px solid var(--line)}
+.tg-d{border:0;background:none;padding:6px 0 4px;display:grid;justify-items:center;gap:1px;color:var(--ink);min-height:52px;position:relative}
+.tg-d small{font:600 10px/14px var(--font-sans);letter-spacing:.04em;color:var(--ink-muted)}
+.tg-d b{font:500 16px/22px var(--font-mono);width:28px;border-radius:50%}
+.tg-d.today b{background:var(--accent);color:var(--on-accent)}
+.tg-d.sel{background:var(--accent-soft)}
+.tg-d i{width:6px;height:6px;border-radius:50%;background:transparent}
+.tg-d.full i{background:var(--done)}
+.tg-d.part i{box-shadow:inset 0 0 0 1.5px var(--done)}
+.tg-d.miss i{background:var(--streak)}
+.tg-d.frozen i{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.tg-all{border-bottom:1px solid var(--line);min-height:28px}
+.tg-lab{font:600 9px/12px var(--font-sans);color:var(--ink-muted);text-align:center;padding-top:6px;letter-spacing:.02em}
+.tg-ac{display:grid;gap:2px;padding:3px 2px;border-left:1px solid var(--line);min-width:0;align-content:start}
+.tg-chip{border:0;display:block;width:100%;text-align:left;font:600 10px/16px var(--font-sans);padding:0 4px;border-radius:4px;background:var(--accent-soft);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tg-more{font:600 10px/14px var(--font-sans);color:var(--ink-muted);text-align:center}
+.tg-body{max-height:min(460px,55dvh);overflow-y:auto;overscroll-behavior:contain;position:relative}
+.tg-hours{position:relative}
+.tg-hours span{position:absolute;right:4px;transform:translateY(-50%);font:500 10px/1 var(--font-mono);color:var(--ink-muted)}
+.tg-col{position:relative;border:0;border-left:1px solid var(--line);padding:0;background:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px var(--hh));cursor:pointer;min-width:0}
+.tg-col.today{background-color:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
+.tg-b{position:absolute;border:0;border-left:3px solid var(--accent);border-radius:4px;background:var(--accent-soft);color:var(--ink);padding:2px 3px;text-align:left;overflow:hidden;font:600 10px/13px var(--font-sans);display:block;min-width:0}
+.tg-b span{display:block;overflow:hidden;text-overflow:clip;word-break:keep-all}
+.tg-b small{display:block;font:500 9px/12px var(--font-mono);color:var(--ink-muted)}
+.tg-b.ok{border-left-color:var(--done);background:var(--done-soft)}
+.tg-b.ok span{text-decoration:line-through;color:var(--ink-muted)}
+.tg-b.no{border-left-color:var(--streak);background:var(--streak-soft)}
+.tg-b.team{border-left-color:var(--timer);background:var(--surface-2)}
+.tg-chip.ok{background:var(--done-soft);text-decoration:line-through;color:var(--ink-muted)}
+.tg-chip.no{background:var(--streak-soft)}
+.tg-chip.team{background:var(--surface-2)}
+.tg-now{position:absolute;left:-1px;right:0;height:2px;background:var(--streak);z-index:2;pointer-events:none}
+.tg-now::before{content:"";position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:var(--streak)}
 .cal-day{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-4);display:grid;gap:var(--space-3)}
 .cal-day-head{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);flex-wrap:wrap}
 .cal-day-head b{font:600 16px/22px var(--font-sans)}
@@ -162,7 +173,6 @@ button.cal-open:hover .t{text-decoration:underline;text-underline-offset:3px}
 .fbtns.col{flex-direction:column;align-items:flex-end}
 .crow .fn{display:grid;min-width:0}
 .crow .sub{font-size:13px;line-height:18px;color:var(--ink-muted)}
-.wk-it small{font-size:12px;color:var(--ink-muted)}
 #fGive{justify-self:start}
 .member .checks{padding-left:0}
 [data-addslot]{display:grid;gap:var(--space-2)}
@@ -344,6 +354,12 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
     </div>
   </header>
 
+  <nav class="tabs" role="tablist" aria-label="Bölümler">
+    <button class="tab" role="tab" id="tab-daily" data-tab="daily" type="button">Günlük <span class="cnt" id="cntDaily"></span></button>
+    <button class="tab" role="tab" id="tab-calendar" data-tab="calendar" type="button">Takvim <span class="cnt" id="cntCalendar"></span></button>
+    <button class="tab" role="tab" id="tab-friends" data-tab="friends" type="button">Arkadaşlar <span class="cnt" id="cntFriends"></span></button>
+  </nav>
+
   <p class="loading" id="loading">Görevlerin yükleniyor…</p>
   <section id="view-daily" role="tabpanel" aria-labelledby="tab-daily" hidden></section>
   <section id="view-calendar" role="tabpanel" aria-labelledby="tab-calendar" hidden></section>
@@ -357,11 +373,6 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
   </footer>
 </main>
 
-<nav class="tabs" role="tablist" aria-label="Bölümler">
-  <button class="tab" role="tab" id="tab-daily" data-tab="daily" type="button"><span class="ti"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M7.5 11.2l2.4 2.4 4.6-5"/></svg><span class="cnt" id="cntDaily"></span></span>Günlük</button>
-  <button class="tab" role="tab" id="tab-calendar" data-tab="calendar" type="button"><span class="ti"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="16" height="14" rx="3"/><path d="M3 9h16M7.5 2.5v4M14.5 2.5v4"/></svg><span class="cnt" id="cntCalendar"></span></span>Takvim</button>
-  <button class="tab" role="tab" id="tab-friends" data-tab="friends" type="button"><span class="ti"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.8 18c.6-3 3-4.8 5.7-4.8s5.1 1.8 5.7 4.8"/><path d="M14.5 5a3 3 0 0 1 0 6M16.5 13.6c1.6.6 2.5 2.1 2.8 4.4"/></svg><span class="cnt" id="cntFriends"></span></span>Arkadaşlar</button>
-</nav>
 <button class="fab" id="fab" type="button" aria-label="İş ekle" title="İş ekle" hidden><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 
 <dialog id="addSheet">
@@ -1203,14 +1214,14 @@ function setAddType(type) {
   $('aDueWrap').hidden = type !== 'general';
 }
 // Takvimdeyken tek seferlik iş seçili günle, diğer ekranlarda tekrarlı iş olarak açılır
-function openAdd(type, due) {
+function openAdd(type, due, st, en) {
   if (!loaded) return;
   const onCal = S.tab === 'calendar' && calView !== 'list';
   type = type || (S.tab === 'calendar' ? 'general' : 'daily');
   if (due === undefined) due = onCal && calSel >= today() ? calSel : '';
   addTmp = { id: uid() }; addDays = 127;
   $('aName').value = ''; $('aDur').value = ''; $('aNote').value = ''; $('aDue').value = due;
-  $('aAllDay').checked = true; $('aRange').hidden = true; $('aTime').value = ''; $('aEnd').value = '';
+  $('aAllDay').checked = !st; $('aRange').hidden = !st; $('aTime').value = st || ''; $('aEnd').value = en || '';
   $('aShareSec').open = false; $('aShare').innerHTML = '';
   drawAddDays(); setAddType(type);
   $('addSheet').showModal();
@@ -1972,31 +1983,82 @@ function renderCalendar() {
   if (!calSel) calSel = t;
   let h = `<div class="seg2" role="tablist"><button type="button" role="tab" data-calview="month" aria-selected="${calView === 'month'}">Ay</button><button type="button" role="tab" data-calview="week" aria-selected="${calView === 'week'}">Hafta</button><button type="button" role="tab" data-calview="list" aria-selected="${calView === 'list'}">Liste</button></div>`;
   if (calView === 'list') { fillView(view, h + generalHtml(), []); return; }
+  const prevTop = $('tgBody') ? $('tgBody').scrollTop : null;
   h += calView === 'week' ? weekHtml() : monthHtml();
   h += calDayHtml(calSel);
   fillView(view, h, []);
+  if (calView === 'week') placeWeekScroll(prevTop);
 }
-function weekHtml() {
-  const t = today(), start = monday(calSel);
-  let full = 0, counted = 0, rows = '';
-  for (let i = 0; i < 7; i++) {
-    const k = shift(start, i), d = parseKey(k), s = calState(k), items = dayItems(k).concat(plansOn(k).map(p => ({ t: { name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '' }, plan: p, due: p.type === 'general' })));
-    if (k <= t && (s === 'full' || s === 'part' || s === 'miss')) { counted++; if (s === 'full') full++; }
-    const shown = items.slice(0, 4);
-    const list = shown.length ? shown.map(it => {
-      const cls = it.plan ? 'team' : k <= t ? (it.done ? 'ok' : (k < t ? 'no' : '')) : '';
-      return `<span class="wk-it ${cls}">${it.t.time ? `<i>${timeLabel(it.t)}</i>` : it.due ? '<i>tüm gün</i>' : ''}<span>${esc(it.t.name)}${it.t.assigned && it.t.by ? `<small> · ${esc(it.t.by)} verdi</small>` : it.plan ? `<small> · ${esc(it.plan.owner_name)}</small>` : ''}</span></span>`;
-    }).join('') + (items.length > 4 ? `<span class="wk-more">+${items.length - 4} iş daha</span>` : '') : '<span class="wk-more">İş yok</span>';
-    rows += `<button type="button" class="wk-day ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}">`
-      + `<span class="wk-date"><small>${WD_SHORT[d.getDay()]}</small><b>${d.getDate()}</b></span><span class="wk-items">${list}</span>`
-      + `<span class="wk-st" title="${CAL_NAMES[s]}"></span></button>`;
+// Haftalık saat çizelgesi: saati olan işler o aralığı kaplayan bloklar, saatsizler üstteki "tüm gün" satırında.
+// Boş bir saate dokununca o gün ve saatle yeni iş penceresi açılır.
+const HH = 44;
+const toMin = hm => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+const fromMin = n => `${pad(Math.floor(n / 60) % 24)}:${pad(n % 60)}`;
+function weekItems(k) {
+  const t = today();
+  return dayItems(k).map(it => ({ name: it.t.name, time: it.t.time, end: it.t.end, dur: it.t.dur, id: it.t.id, cls: k <= t ? (it.done ? 'ok' : k < t ? 'no' : '') : '' }))
+    .concat(plansOn(k).map(p => ({ name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', cls: 'team', owner: p.owner_name })));
+}
+// Çakışan bloklar yan yana dizilir
+function layoutBlocks(list) {
+  const items = list.map(x => { const a = toMin(x.time); let b = x.end ? toMin(x.end) : a + Math.max(30, Math.min(x.dur || 60, 240)); return Object.assign({}, x, { a, b: Math.min(Math.max(b, a + 30), 24 * 60) }); }).sort((x, y) => x.a - y.a || y.b - x.b);
+  let group = [], lanes = [], groupEnd = -1;
+  const flush = () => { group.forEach(g => { g.n = lanes.length; }); group = []; lanes = []; };
+  for (const it of items) {
+    if (it.a >= groupEnd) { flush(); groupEnd = -1; }
+    let lane = lanes.findIndex(e => e <= it.a);
+    if (lane < 0) { lane = lanes.length; lanes.push(0); }
+    lanes[lane] = it.b; it.lane = lane; group.push(it); groupEnd = Math.max(groupEnd, it.b);
   }
+  flush();
+  return items;
+}
+let tgWeek = '', tgScroll = 0;
+function weekHtml() {
+  const t = today(), start = monday(calSel), days = [];
+  let full = 0, counted = 0, first = 7 * 60, last = 22 * 60;
+  for (let i = 0; i < 7; i++) {
+    const k = shift(start, i), s = calState(k), items = weekItems(k);
+    if (k <= t && (s === 'full' || s === 'part' || s === 'miss')) { counted++; if (s === 'full') full++; }
+    const timed = layoutBlocks(items.filter(x => x.time)), allDay = items.filter(x => !x.time);
+    for (const b of timed) { first = Math.min(first, b.a); last = Math.max(last, b.b); }
+    days.push({ k, s, timed, allDay });
+  }
+  if (k_inWeek(t, start)) { const n = toMin(nowHM()); first = Math.min(first, n); last = Math.max(last, n + 30); }
+  const h0 = Math.floor(first / 60), h1 = Math.min(24, Math.ceil(last / 60)), H = (h1 - h0) * HH;
+  const y = m => ((m - h0 * 60) / 60 * HH).toFixed(1);
+  const label = x => esc(x.name) + (x.owner ? ` · ${esc(x.owner)}` : '');
+  const btnAttrs = (x, k) => x.id ? `data-caledit="${x.id}"` : `data-cal="${k}"`;
+  let head = '<span></span>', all = '<span class="tg-lab">tüm<br>gün</span>', cols = '';
+  for (const d of days) {
+    const dd = parseKey(d.k);
+    head += `<button type="button" class="tg-d ${d.s}${d.k === t ? ' today' : ''}${d.k === calSel ? ' sel' : ''}" data-cal="${d.k}" aria-pressed="${d.k === calSel}" aria-label="${dd.getDate()} ${MONTHS[dd.getMonth()]} ${WEEKDAYS[dd.getDay()]}${CAL_NAMES[d.s] ? ': ' + CAL_NAMES[d.s] : ''}"><small>${WD_SHORT[dd.getDay()]}</small><b>${dd.getDate()}</b><i></i></button>`;
+    all += `<div class="tg-ac">` + d.allDay.slice(0, 3).map(x => `<button type="button" class="tg-chip ${x.cls}" ${btnAttrs(x, d.k)} title="${label(x)}">${esc(x.name)}</button>`).join('')
+      + (d.allDay.length > 3 ? `<button type="button" class="tg-more" data-cal="${d.k}">+${d.allDay.length - 3}</button>` : '') + `</div>`;
+    cols += `<div class="tg-col${d.k === t ? ' today' : ''}" data-tgslot="${d.k}" style="height:${H}px">`
+      + d.timed.map(b => `<button type="button" class="tg-b ${b.cls}" ${btnAttrs(b, d.k)} style="top:${y(b.a)}px;height:${(Math.max(b.b - b.a, 30) / 60 * HH - 2).toFixed(1)}px;left:calc(${(b.lane / b.n * 100).toFixed(2)}% + 1px);width:calc(${(100 / b.n).toFixed(2)}% - 2px)" title="${label(b)} · ${fromMin(b.a)}–${fromMin(b.b)}" aria-label="${label(b)}, ${fromMin(b.a)}–${fromMin(b.b)}"><span>${esc(b.name)}</span>${b.b - b.a >= 50 ? `<small>${fromMin(b.a)}</small>` : ''}</button>`).join('')
+      + (d.k === t ? `<span class="tg-now" style="top:${y(toMin(nowHM()))}px"></span>` : '') + `</div>`;
+  }
+  let hours = '';
+  for (let h = h0 + 1; h < h1; h++) hours += `<span style="top:${(h - h0) * HH}px">${pad(h)}</span>`;
   const stats = counted ? `Bu hafta ${full}/${counted} gün tamam` : 'Bu hafta henüz sayılan gün yok';
   return `<div class="cal-head"><button class="icon-btn" type="button" data-wknav="-7" aria-label="Önceki hafta">‹</button>`
     + `<div class="cal-title"><b>${shortDate(start)} – ${shortDate(shift(start, 6))}</b><span class="st-sub">${stats}</span></div>`
     + `<button class="icon-btn" type="button" data-wknav="7" aria-label="Sonraki hafta">›</button></div>`
-    + `<div class="wk">${rows}</div>`
+    + `<div class="tg" data-h0="${h0}"><div class="tg-row tg-head">${head}</div><div class="tg-row tg-all">${all}</div>`
+    + `<div class="tg-body" id="tgBody"><div class="tg-row"><div class="tg-hours" style="height:${H}px">${hours}</div>${cols}</div></div></div>`
+    + `<p class="hint">Boş bir saate dokunarak o güne iş ekleyebilirsin.</p>`
     + (monday(calSel) !== monday(t) ? `<button class="link" type="button" data-wknav="0">Bu haftaya dön</button>` : '');
+}
+const k_inWeek = (k, start) => k >= start && k <= shift(start, 6);
+// Çizelge yeniden çizilince kaydırma yeri korunur; yeni haftada şimdiki saate (ya da ilk işe) kaydırılır
+function placeWeekScroll(prevTop) {
+  const body = $('tgBody'); if (!body) return;
+  const wk = monday(calSel), h0 = +body.closest('.tg').dataset.h0;
+  if (wk === tgWeek && prevTop != null) { body.scrollTop = prevTop; return; }
+  tgWeek = wk;
+  const target = k_inWeek(today(), wk) ? toMin(nowHM()) - 90 : 8 * 60;
+  body.scrollTop = Math.max(0, (target - h0 * 60) / 60 * HH);
 }
 function monthHtml() {
   const t = today();
@@ -2054,6 +2116,16 @@ $('view-calendar').addEventListener('click', e => {
   if (wn) { const step = +wn.dataset.wknav; calSel = step ? shift(calSel, step) : today(); calMonth = calSel.slice(0, 7); renderCalendar(); return; }
   const ad = e.target.closest('[data-addday]');
   if (ad) { openAdd('general', ad.dataset.addday); return; }
+  const slot = e.target.closest('[data-tgslot]');
+  if (slot && e.target === slot) {
+    const k = slot.dataset.tgslot, h0 = +slot.closest('.tg').dataset.h0;
+    const m = h0 * 60 + Math.floor((e.clientY - slot.getBoundingClientRect().top) / HH * 2) * 30;
+    calSel = k; calMonth = k.slice(0, 7);
+    if (k < today()) { renderCalendar(); return; }
+    renderCalendar();
+    openAdd('general', k, fromMin(Math.min(m, 23 * 60)), fromMin(Math.min(m + 60, 23 * 60 + 59)));
+    return;
+  }
   const gp = e.target.closest('[data-giveplan]');
   if (gp) {
     const pl = PLANS.find(x => x.task_id === gp.dataset.giveplan);
