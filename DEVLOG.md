@@ -82,9 +82,25 @@ Netleşenler:
 - Akış ayrı sekme değil: Arkadaşlar sekmesinde 3. bölüm (Arkadaşlar | Ekipler | Akış).
 - Ana sekmelere simge eklenir (yazılar kalır); Arkadaşlar rozeti = istekler + yeni tepki/olay.
 
+## 2026-10-06 — Akış, tepkiler, mesaj tonu (kodlandı)
+- Ana sekmelerde simge (360 px altı ekranda simge gizlenir).
+- Arkadaşlar → Akış bölümü: son 30 gün; seri dönüm noktaları (arkadaşlar, ilerleme paylaşanlar) ve ekip ortak işleri.
+  Tepkiler: 👏 Alkış, 🔥 Harika, 💪 Güçlü, ❤️ Sevgiler; kişi başı tek tepki, değiştirilebilir, aynısına basınca geri alınır;
+  tepkiden sonra isteğe bağlı not (80 karakter). Kendi olaylarında kimin ne gönderdiği görünür.
+- Arkadaş listesinde son 2 günde dönüm noktasına ulaşan arkadaşta "👏 Tebrik et" düğmesi.
+- Arkadaşlar sekmesi rozeti: gelen istek + okunmamış akış (yeni olay ya da kendi olayına yeni tepki).
+- Mesaj tonu (hesap): Samimi / Sade / Esprili; gün bitti, dönüm noktası, seri kırıldı ve ilerleme cümleleri buna göre.
+- Kutlama kartı: çetele çizgileri tek tek çizilir, haftalık karşılaştırma, rekora kalan, sonraki dönüm noktası halkası.
+  Seri rozetine dokununca aynı kart konfetisiz açılır.
+- Bildirimler (hesap, ayrı anahtarlar): tepki aldın; arkadaşın dönüm noktasına ulaştı. Akşam hatırlatması seri varsa
+  "5 günlük serin tehlikede · 2 iş kaldı · 1 izin hakkın var" der.
+- Veritabanı: `supabase/14-akis-ve-tepki.sql` (events, reactions, akis, tepki_ver, seri_olayi, ortak_is_bitir olay yazar,
+  profiles: message_tone, notify_reactions, notify_milestones; hatirlatma_listesi yenilendi). Edge Function değişmedi;
+  tepki ve dönüm noktası bildirimleri 5 dakikalık görevde bir önceki 5 dakikada oluşanlar için gider.
+- SQL çalıştırılmadan Akış bölümü, ton seçimi ve yeni bildirim anahtarları görünmez; gerisi çalışır.
+
 ## Sıradaki adımlar
-- Kullanıcı siteyi deneyip onay verince tebrik/akış tasarımı kodlanacak.
-- 11, 12 ve 13 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
+- 11, 12, 13 ve 14 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
 - Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
 - Ekip müsaitlik görünümü (haftalık çizelgede üyelerin dolu saatleri).
 - Kutlama ve titreşim.

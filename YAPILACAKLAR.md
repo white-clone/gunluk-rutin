@@ -41,6 +41,10 @@
 - [x] Ortak işler (her üye yazar/bitirir), yetkili üyeler görev dağıtır, ekip özeti, kutlama ve günün sözü.
 - [ ] 13-ekip-ortak-isler.sql Supabase'de çalıştırılacak (12'den sonra).
 
+## I. Akış ve tepkiler
+- [x] Akış (Arkadaşlar altında), tepkiler, tebrik düğmesi, mesaj tonu, kutlama kartı, yeni bildirimler.
+- [ ] 14-akis-ve-tepki.sql Supabase'de çalıştırılacak (13'ten sonra).
+
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.
       Authentication → Emails → SMTP Settings. Kurulmadan doğrulama ve şifre sıfırlama

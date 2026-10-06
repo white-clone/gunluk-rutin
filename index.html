@@ -35,6 +35,8 @@ h1{margin:2px 0 0;font:600 20px/26px var(--font-display);text-wrap:balance}
 .tab{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;min-height:44px;font-size:14px;font-weight:600;min-width:0;color:var(--ink-muted);display:flex;justify-content:center;align-items:center;gap:4px}
 .tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 .cnt{font:500 13px/22px var(--font-mono);color:var(--ink-muted)}
+.tab-ic{flex:none}
+@media (max-width:360px){.tab-ic{display:none}}
 
 /* ekleme düğmesi */
 .fab{position:fixed;z-index:6;right:max(16px,calc((100% - 440px) / 2 + 16px));bottom:calc(20px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:18px;border:0;background:var(--accent);color:var(--on-accent);display:grid;place-content:center;padding:0;box-shadow:0 6px 18px rgba(0,0,0,.22)}
@@ -249,7 +251,37 @@ button.mem{border:0;background:none;padding:4px 0;text-align:left;color:inherit;
 .cele-burst{position:absolute;inset:0;pointer-events:none}
 .cele-burst i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:fall 1.6s ease-in forwards}
 @keyframes fall{to{transform:translateY(420px) rotate(540deg);opacity:0}}
-@media (prefers-reduced-motion:reduce){.row.pop .mark,.cele-card,.cele-burst i{animation:none}}
+.cele-tally{width:100%;display:grid;justify-items:center}
+.cele-tally .tally{max-height:40px}
+.cele-tally rect{animation:draw .25s both}
+@keyframes draw{from{opacity:0;transform:scaleY(0)}}
+.cele-tally rect{transform-origin:center bottom;transform-box:fill-box}
+.cele-info{display:grid;gap:4px;justify-items:center;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.goal{display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-2);text-align:left}
+.goal svg{width:52px;height:52px;transform:rotate(-90deg);flex:none}
+.goal .track{fill:none;stroke:var(--surface-2);stroke-width:6}
+.goal .arc{fill:none;stroke:var(--streak);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .8s ease-out}
+.goal b{color:var(--ink)}
+.chip{cursor:pointer}
+/* akış */
+.feed{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-3)}
+.ev{display:grid;grid-template-columns:36px minmax(0,1fr);gap:var(--space-3);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3)}
+.ev.mine{background:var(--accent-soft);border-color:transparent}
+.ev-b{display:grid;gap:6px;min-width:0}
+.ev-t{margin:0;overflow-wrap:anywhere}
+.ev-t b{font-weight:600}
+.ev .sub{font-size:13px;line-height:18px;color:var(--ink-muted)}
+.rx{display:flex;flex-wrap:wrap;gap:6px}
+.rx button{border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-pill);min-height:36px;padding:0 10px;display:inline-flex;align-items:center;gap:4px;font:600 13px/1 var(--font-sans);color:var(--ink-muted)}
+.rx button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.rx .e{font-size:16px;line-height:1}
+.rx-note{display:flex;gap:var(--space-2)}
+.rx-note input{flex:1;width:0;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-pill);padding:8px 14px}
+.rx-who{margin:0;padding:0;list-style:none;display:grid;gap:2px;font-size:13px;line-height:18px;color:var(--ink-muted)}
+.rx-who b{color:var(--ink);font-weight:600}
+.fli{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px}
+.rxq{white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.row.pop .mark,.cele-card,.cele-burst i,.cele-tally rect{animation:none}}
 
 /* bant */
 .banner{display:flex;gap:var(--space-3);align-items:flex-start;justify-content:space-between;background:var(--streak-soft);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);color:var(--ink)}
@@ -375,9 +407,9 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
   </header>
 
   <nav class="tabs" role="tablist" aria-label="Bölümler">
-    <button class="tab" role="tab" id="tab-daily" data-tab="daily" type="button">Günlük <span class="cnt" id="cntDaily"></span></button>
-    <button class="tab" role="tab" id="tab-calendar" data-tab="calendar" type="button">Takvim <span class="cnt" id="cntCalendar"></span></button>
-    <button class="tab" role="tab" id="tab-friends" data-tab="friends" type="button">Arkadaşlar <span class="cnt" id="cntFriends"></span></button>
+    <button class="tab" role="tab" id="tab-daily" data-tab="daily" type="button"><svg class="tab-ic" width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="M7.5 11.2l2.4 2.4 4.6-5"/></svg>Günlük <span class="cnt" id="cntDaily"></span></button>
+    <button class="tab" role="tab" id="tab-calendar" data-tab="calendar" type="button"><svg class="tab-ic" width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="16" height="14" rx="3"/><path d="M3 9h16M7.5 2.5v4M14.5 2.5v4"/></svg>Takvim <span class="cnt" id="cntCalendar"></span></button>
+    <button class="tab" role="tab" id="tab-friends" data-tab="friends" type="button"><svg class="tab-ic" width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.8 18c.6-3 3-4.8 5.7-4.8s5.1 1.8 5.7 4.8"/><path d="M14.5 5a3 3 0 0 1 0 6M16.5 13.6c1.6.6 2.5 2.1 2.8 4.4"/></svg>Arkadaşlar <span class="cnt" id="cntFriends"></span></button>
   </nav>
 
   <p class="loading" id="loading">Görevlerin yükleniyor…</p>
@@ -448,6 +480,7 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
       <button class="btn secondary" type="submit">Kaydet</button>
     </form>
     <div class="field"><span class="lbl">TEMA</span><div class="seg three" role="group" aria-label="Tema"><button type="button" data-theme-set="system">Sistem</button><button type="button" data-theme-set="light">Açık</button><button type="button" data-theme-set="dark">Koyu</button></div></div>
+    <div class="field" id="toneWrap" hidden><span class="lbl">MESAJ TONU</span><div class="seg three" role="group" aria-label="Mesaj tonu"><button type="button" data-tone="samimi">Samimi</button><button type="button" data-tone="sade">Sade</button><button type="button" data-tone="esprili">Esprili</button></div><span class="hint" id="toneHint"></span></div>
     <label class="toggle" for="shareIn"><input type="checkbox" id="shareIn"><span class="fn"><span class="t">İlerlememi arkadaşlarım görsün</span><span class="sub">Serin ve bugün kaç işini bitirdiğin görünür. Görev adların yalnızca "dürtebilsin" dediğin işler için görünür.</span></span></label>
     <details class="acc-sec" id="notifSec">
       <summary>BİLDİRİMLER</summary>
@@ -459,6 +492,8 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
         <label class="toggle" for="nEvening"><input type="checkbox" id="nEvening" data-pref="remind_evening"><span class="fn"><span class="t">Akşam hatırlatması</span><span class="sub">Yalnızca bitmemiş iş varsa, şu saatte: <input class="time-in" type="time" data-pref-time="evening_time" aria-label="Akşam hatırlatma saati"></span></span></label>
         <label class="toggle" for="nWeekly"><input type="checkbox" id="nWeekly" data-pref="weekly_summary"><span class="fn"><span class="t">Haftalık özet</span><span class="sub">Pazar 20:00'de haftanın özeti.</span></span></label>
         <label class="toggle" for="nTasks"><input type="checkbox" id="nTasks" data-pref="remind_tasks"><span class="fn"><span class="t">Görev hatırlatmaları</span><span class="sub">Saati olan işler, her işte seçtiğin süre kadar önce hatırlatılır (paylaşılan planlar ve verdiğin görevler dahil).</span></span></label>
+        <label class="toggle" for="nRx" data-feedonly hidden><input type="checkbox" id="nRx" data-pref="notify_reactions"><span class="fn"><span class="t">Tepki bildirimleri</span><span class="sub">Biri sana tepki gönderince bildirim gelir.</span></span></label>
+        <label class="toggle" for="nMs" data-feedonly hidden><input type="checkbox" id="nMs" data-pref="notify_milestones"><span class="fn"><span class="t">Arkadaşlarımın başarıları</span><span class="sub">Arkadaşın bir seri dönüm noktasına ulaşınca bildirim gelir.</span></span></label>
         <label class="toggle" for="nPoke"><input type="checkbox" id="nPoke" data-pref="allow_poke"><span class="fn"><span class="t">Arkadaşlarım beni dürtebilsin</span><span class="sub">23:00–08:00 arası dürtme gelmez.</span></span></label>
       </div>
     </details>
@@ -560,7 +595,7 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
   </form>
 </dialog>
 
-<div class="cele" id="cele" hidden><div class="cele-card"><div class="cele-burst" aria-hidden="true"></div><p class="cele-big" id="celeBig"></p><p class="cele-sub" id="celeSub"></p><button class="btn primary" type="button" id="celeOk">Devam</button></div></div>
+<div class="cele" id="cele" hidden><div class="cele-card"><div class="cele-burst" aria-hidden="true"></div><p class="cele-big" id="celeBig"></p><div class="cele-tally" id="celeTally"></div><p class="cele-sub" id="celeSub"></p><div class="cele-info" id="celeInfo"></div><button class="btn primary" type="button" id="celeOk">Devam</button></div></div>
 
 <dialog id="friendSheet">
   <form class="sheet" id="friendForm" method="dialog">
@@ -946,7 +981,7 @@ function yesterdayBanner() {
   const doneN = rec ? rec.done.length : 0;
   const left = freezesLeft(y);
   const text = prev > 0
-    ? `Dün ${doneN}/${exp} iş yapıldı ve ${prev} günlük serin sıfırlandı. Yaptıysan işaretle${left > 0 ? ' ya da izin günü kullan' : ''}; serin geri gelir.`
+    ? `${TONE[tone()].broken(prev, Math.max(S.best, prev))} Dün ${doneN}/${exp} iş yapılmış; yaptıysan işaretle${left > 0 ? ` ya da izin günü kullan (bu ay ${left} hakkın var)` : ''}, serin geri gelir.`
     : `Dün ${doneN}/${exp} iş yapıldı. Yaptıysan sonradan işaretleyebilirsin.`;
   return `<div class="banner" role="status"><div class="banner-body"><div><strong>Dün eksik kaldı.</strong> ${text}</div>`
     + `<div class="banner-acts"><button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`
@@ -1072,26 +1107,77 @@ function generalHtml() {
 // ---- teşvik ----
 const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
 const MILESTONES = { 3: 'Üç gün üst üste! Alışkanlık böyle başlar.', 7: 'Tam bir hafta! Seri artık senin.', 14: 'İki hafta oldu. Bu iş oturdu.', 21: '21 gün! Artık rutinin bir parçası.', 30: 'Bir ay boyunca hiç bırakmadın.', 50: '50 gün! Çok az kişi buraya gelir.', 100: '100 gün! Efsane bir seri.', 200: '200 gün. Saygılar.', 365: 'Tam bir yıl! İnanılmaz.' };
-function celebrate(big, sub) {
-  $('celeBig').textContent = big; $('celeSub').textContent = sub;
-  const colors = ['var(--done)', 'var(--streak)', 'var(--timer)', 'var(--accent)'];
-  $('cele').querySelector('.cele-burst').innerHTML = Array.from({ length: 28 }, (_, i) => `<i style="left:${(i * 37) % 100}%;background:${colors[i % 4]};animation-delay:${(i % 7) * .08}s"></i>`).join('');
-  $('cele').hidden = false; buzz([30, 60, 30]);
-  clearTimeout(celebrate.t); celebrate.t = setTimeout(() => { $('cele').hidden = true; }, 4500);
+// Mesaj tonu: kişi hesap ayarlarından seçer (samimi, sade, esprili)
+const tone = () => (PROFILE && PROFILE.message_tone) || 'samimi';
+const firstName = () => PROFILE ? PROFILE.full_name.trim().split(/\s+/)[0] : '';
+const pick = (list, n) => list[Math.abs(n) % list.length];
+const TONE = {
+  samimi: {
+    day: n => pick([`Harikasın ${firstName()}, bugün tamam!`, `Eline sağlık ${firstName()}, gün bitti!`, `Bugün de yaptın ${firstName()}!`], n),
+    ms: n => `${n} gün oldu ${firstName()}!`,
+    msSub: n => MILESTONES[n],
+    broken: (prev, best) => `${prev} günlük serin bitti; olur böyle şeyler. Rekorun ${best} gün, bugün yeniden başla.`,
+    cheer: (d, t) => !d ? 'İlk işi bitir, gün açılsın' : d === t ? 'Bugün tamam, harikasın' : t - d === 1 ? 'Son bir iş kaldı' : d * 2 >= t ? 'Yarıyı geçtin, devam' : 'İyi gidiyorsun'
+  },
+  sade: {
+    day: () => 'Bugün tamam',
+    ms: n => `${n} günlük seri`,
+    msSub: n => { const nx = nextGoal(n); return nx ? `Sonraki hedef: ${nx} gün` : 'En büyük hedefe ulaştın.'; },
+    broken: (prev, best) => `Seri sıfırlandı (${prev} gün). Rekor: ${best} gün.`,
+    cheer: () => 'Bugünkü ilerleme'
+  },
+  esprili: {
+    day: n => pick(['Bugünü cebe attın!', 'Liste temizlendi, kahve hak edildi.', 'Görev listesi: 0, sen: 1.'], n),
+    ms: n => `${n} gün! Durdurulamıyorsun.`,
+    msSub: n => pick(['Artık bu iş sende huy oldu.', 'Takvim bile şaşırdı.', 'Bu gidişle rekor kitaplarına gireceksin.'], n),
+    broken: (prev, best) => `Seri tatile çıktı (${prev} gün). Geri çağır, rekorun ${best} gün seni bekliyor.`,
+    cheer: (d, t) => !d ? 'Liste seni bekliyor, ısınma turu?' : d === t ? 'Hepsi bitti, şov zamanı' : t - d === 1 ? 'Son bir tane, bitir şunu' : d * 2 >= t ? 'Yarıyı geçtin, rüzgar arkanda' : 'Isınıyorsun'
+  }
+};
+const msList = () => Object.keys(MILESTONES).map(Number);
+const nextGoal = n => msList().find(m => m > n);
+// Kişisel bilgiler: haftalık karşılaştırma, rekora kalan, sonraki hedef
+function weekFull(startKey, days) { let n = 0; for (let i = 0; i < days; i++) if (dayState(shift(startKey, i)) === 'full') n++; return n; }
+function personalLines(n) {
+  const t = today(), mon = monday(t), span = wdIndex(t) + 1;
+  const a = weekFull(mon, span), b = weekFull(shift(mon, -7), span), lines = [];
+  lines.push(`Bu hafta ${a}/${span} gün tamam` + (a > b ? `, geçen haftadan ${a - b} gün iyi` : a === b && a ? ', geçen haftayla aynı' : ''));
+  if (n > 1 && n >= S.best) lines.push('Yeni rekor!');
+  else if (S.best > n) lines.push(`Rekorunu geçmeye ${S.best - n + 1} gün kaldı (rekor ${S.best} gün)`);
+  return lines;
 }
+function goalRing(n) {
+  const nx = nextGoal(n); if (!nx) return '';
+  const prev = [0].concat(msList()).filter(m => m <= n).pop(), f = (n - prev) / (nx - prev), C = 2 * Math.PI * 22;
+  return `<div class="goal"><svg viewBox="0 0 52 52" aria-hidden="true"><circle class="track" cx="26" cy="26" r="22"/><circle class="arc" cx="26" cy="26" r="22" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - f)).toFixed(1)}"/></svg><span><b>${nx} güne ${nx - n} gün kaldı</b><br>Sonraki dönüm noktası</span></div>`;
+}
+// Kutlama ve seri kartı: çetele çizgileri tek tek çizilir, altında sonraki hedef halkası
+function celebrate(big, sub, n, festive = true) {
+  $('celeBig').textContent = big; $('celeSub').textContent = sub;
+  const k = Math.min(n || 0, 30);
+  $('celeTally').innerHTML = k > 0 ? tallySvg(k) : '';
+  $('celeTally').querySelectorAll('rect').forEach((r, i) => { r.style.animationDelay = `${(i * .06).toFixed(2)}s`; });
+  $('celeInfo').innerHTML = n ? personalLines(n).map(l => `<span>${esc(l)}</span>`).join('') + goalRing(n) : '';
+  const colors = ['var(--done)', 'var(--streak)', 'var(--timer)', 'var(--accent)'];
+  $('cele').querySelector('.cele-burst').innerHTML = festive ? Array.from({ length: 28 }, (_, i) => `<i style="left:${(i * 37) % 100}%;background:${colors[i % 4]};animation-delay:${(i % 7) * .08}s"></i>`).join('') : '';
+  $('cele').hidden = false;
+  if (festive) buzz([30, 60, 30]);
+  clearTimeout(celebrate.t);
+  if (festive) celebrate.t = setTimeout(() => { $('cele').hidden = true; }, 6000);
+}
+// Üstteki seri rozetine dokununca seri kartı açılır
+$('streakChip').addEventListener('click', () => {
+  if (!loaded) return;
+  const n = currentStreak();
+  celebrate(n ? `${n} günlük seri` : 'Seri henüz başlamadı', n ? `En uzun serin ${S.best} gün.` : 'Bugünün bütün işlerini bitir, ilk çizgi gelsin.', n, false);
+});
 $('celeOk').addEventListener('click', () => { $('cele').hidden = true; });
 $('cele').addEventListener('click', e => { if (e.target.id === 'cele') $('cele').hidden = true; });
 // Günün sözü: her gün bir tane, sırayla
 const SAYINGS = ['Küçük adımlar, büyük değişimler getirir.', 'Bugün yaptığın, yarınki seni şekillendirir.', 'Mükemmel olmak zorunda değilsin, devam etmen yeter.', 'Bir işi bitirmenin en iyi zamanı şimdi.', 'Motivasyon başlatır, alışkanlık sürdürür.', 'Zor günlerde bile bir adım atmak seriyi yaşatır.', 'Kendine verdiğin sözü tutmak en güzel güvendir.', 'Yavaş ilerlemek, hiç ilerlememekten iyidir.', 'Her tamamlanan iş, bir sonrakini kolaylaştırır.', 'Dün geride kaldı; bugün yeni bir çizgi çek.', 'Başarı her gün tekrarlanan küçük çabaların toplamıdır.', 'İlk işi bitir, gerisi gelir.', 'Planlanan iş, yarı yapılmış iştir.', 'Birlikte yapılan iş daha kolay biter; ekibine haber ver.', 'Bugün bir arkadaşını tebrik et, ikiniz de kazanırsınız.', 'Disiplin, istediğin şeyi en çok istediğin şey için seçmektir.', 'Düzenli olmak, özgür olmanın kısa yoludur.', 'Bir gün mü, birinci gün mü? Seçim senin.', 'Erteleme yarına iş yükler, bitirmek bugüne huzur.', 'Seri bir sayı değil, kendine verdiğin değerdir.', 'Az ama her gün.', 'Yorulduğunda dinlen, ama bırakma.', 'Her sabah yeni bir başlangıç.', 'Bitirdiğin her iş kendine bir alkış.', 'Hedefini küçük parçalara böl, bir tanesini şimdi yap.', 'Rutinin seni taşır, sen sadece başla.', 'Bugünün işi bugün biter, yarın hafif uyanırsın.', 'İstikrar yetenekten güçlüdür.', 'Bir saatlik odak, bir günlük dağınıklıktan değerlidir.', 'Kendinle yarış, dünkü senden bir adım öne geç.', 'Ekipçe planlanan iş yarı yoldadır.'];
 const sayingOfDay = () => { const d = new Date(), start = new Date(d.getFullYear(), 0, 0); return SAYINGS[Math.floor((d - start) / 864e5) % SAYINGS.length]; };
 // İlerleme çubuğunun yanında duruma göre kısa bir cesaret cümlesi
-function cheer(doneN, total) {
-  if (!doneN) return 'İlk işi bitir, gün açılsın';
-  if (doneN === total) return 'Bugün tamam, harikasın';
-  if (total - doneN === 1) return 'Son bir iş kaldı';
-  if (doneN * 2 >= total) return 'Yarıyı geçtin, devam';
-  return 'İyi gidiyorsun';
-}
+const cheer = (doneN, total) => TONE[tone()].cheer(doneN, total);
 let justDone = '';
 
 // ---- eylemler ----
@@ -1104,8 +1190,11 @@ function markDone(id) {
   justDone = id; buzz(20);
   if (dayComplete(today())) {
     const n = currentStreak();
-    if (MILESTONES[n]) celebrate(`${n} günlük seri!`, MILESTONES[n]);
-    else celebrate('Bugün tamam!', n > 1 ? `Serin ${n} gün oldu. Yarın da aynı sırayla.` : 'Serinin ilk günü. Yarın da gel, ikinci çizgi gelsin.');
+    const T = TONE[tone()];
+    if (MILESTONES[n]) {
+      celebrate(T.ms(n), T.msSub(n), n);
+      if (HAS_FEED) sb.rpc('seri_olayi', { p_gun: n }).then(() => loadFeed(), () => {});
+    } else celebrate(T.day(n), n > 1 ? `Serin ${n} gün oldu.` : 'Serinin ilk günü. Yarın da gel, ikinci çizgi gelsin.', n);
   }
 }
 function onAction(e) {
@@ -1172,6 +1261,19 @@ document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b || !loaded) return;
   S.tab = b.dataset.tab; render();
   if (S.tab === 'friends') { loadFriends(); if (S.ftab === 'teams') loadTeams(); }
+});
+// Mesaj tonu seçimi
+const TONE_HINT = { samimi: 'Örnek: "Harikasın, bugün tamam!"', sade: 'Örnek: "Bugün tamam · Seri 5 gün"', esprili: 'Örnek: "Bugünü cebe attın!"' };
+function drawTone() {
+  document.querySelectorAll('[data-tone]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tone === tone())));
+  $('toneHint').textContent = TONE_HINT[tone()];
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-tone]'); if (!b || !PROFILE) return;
+  const old = PROFILE.message_tone; PROFILE.message_tone = b.dataset.tone; drawTone();
+  const { error } = await sb.from('profiles').update({ message_tone: b.dataset.tone }).eq('id', USER.id);
+  if (error) { PROFILE.message_tone = old; drawTone(); toast(hataMesaji(error)); return; }
+  if (loaded) render();
 });
 // Tema seçimi hesap penceresinde
 function drawThemeSeg() { document.querySelectorAll('[data-theme-set]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeSet === S.theme))); }
@@ -1364,10 +1466,13 @@ function renderFriends() {
   const incoming = list.filter(f => f.status === 'pending' && f.gelen);
   const outgoing = list.filter(f => f.status === 'pending' && !f.gelen);
   const friends = list.filter(f => f.status === 'accepted');
-  $('cntFriends').textContent = incoming.length || '';
+  $('cntFriends').textContent = (incoming.length + feedUnread()) || '';
   if (!PROFILE) { view.innerHTML = ''; return; }
-  const seg = `<div class="seg2" role="tablist"><button type="button" role="tab" data-ftab="friends" aria-selected="${S.ftab !== 'teams'}">Arkadaşlar</button><button type="button" role="tab" data-ftab="teams" aria-selected="${S.ftab === 'teams'}">Ekipler</button></div>`;
+  if (S.ftab === 'feed' && !HAS_FEED) S.ftab = 'friends';
+  const unread = feedUnread();
+  const seg = `<div class="seg2" role="tablist"><button type="button" role="tab" data-ftab="friends" aria-selected="${S.ftab === 'friends' || !S.ftab}">Arkadaşlar</button><button type="button" role="tab" data-ftab="teams" aria-selected="${S.ftab === 'teams'}">Ekipler</button>${HAS_FEED ? `<button type="button" role="tab" data-ftab="feed" aria-selected="${S.ftab === 'feed'}">Akış${unread ? ` <span class="cnt">${unread}</span>` : ''}</button>` : ''}</div>`;
   if (S.ftab === 'teams') { fillView(view, seg + teamsHtml(), ['tName', 'tCode']); return; }
+  if (S.ftab === 'feed') { fillView(view, seg + feedHtml(), ['rxNoteIn']); markFeedSeen(); return; }
   let h = seg + `<div class="code"><div><span class="eyebrow">ARKADAŞ KODUN</span><b>${esc(PROFILE.friend_code)}</b></div><button class="btn secondary sm" type="button" data-fact="copy">Kopyala</button></div>`;
   h += `<form class="add" data-form="friend"><input class="name code-in" id="fCode" placeholder="Arkadaşının kodunu gir" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Arkadaş kodu" required><button class="btn primary" type="submit">Ekle</button></form>`;
   if (frError) h += `<div class="msg err" role="alert">${esc(frError)}</div>`;
@@ -1383,8 +1488,9 @@ function renderFriends() {
   }
   if (friends.length) {
     h += `<p class="sec">ARKADAŞLARIN (${friends.length})</p><ul class="list">` + friends.map(f =>
-      `<li><button class="frow fbtn" type="button" data-fact="open" data-id="${f.id}"><span class="av" aria-hidden="true">${esc(initials(f.lakap || f.full_name))}</span>`
-      + `<span class="fn"><span class="t">${esc(f.lakap || f.full_name)}</span><span class="sub">${[f.lakap ? esc(f.full_name) : '', progressText(f)].filter(Boolean).join(' · ') || 'Lakap takmak için dokun'}</span></span><span class="chev" aria-hidden="true">›</span></button></li>`).join('') + `</ul>`;
+      { const ev = friendMilestone(f.friend_id); return `<li class="fli"><button class="frow fbtn" type="button" data-fact="open" data-id="${f.id}"><span class="av" aria-hidden="true">${esc(initials(f.lakap || f.full_name))}</span>`
+      + `<span class="fn"><span class="t">${esc(f.lakap || f.full_name)}</span><span class="sub">${ev ? `${ev.value} günlük seriye ulaştı` : [f.lakap ? esc(f.full_name) : '', progressText(f)].filter(Boolean).join(' · ') || 'Lakap takmak için dokun'}</span></span>${ev ? '' : '<span class="chev" aria-hidden="true">›</span>'}</button>`
+      + (ev ? (ev.tepkim ? `<button class="btn ghost sm rxq" type="button" data-ftab="feed">${RX[ev.tepkim].e} Gönderildi</button>` : `<button class="btn outline sm rxq" type="button" data-rxq="${ev.id}">👏 Tebrik et</button>`) : '') + `</li>`; }).join('') + `</ul>`;
   } else if (FR && !incoming.length && !outgoing.length) {
     h += `<div class="empty"><h2>Henüz arkadaşın yok</h2><p>Kodunu arkadaşına gönder ya da onun kodunu yukarıya gir. İstek kabul edilince burada görünür ve ona lakap takabilirsin.</p></div>`;
   }
@@ -1435,7 +1541,15 @@ async function addFriend(form) {
 }
 $('view-friends').addEventListener('click', e => {
   const ft = e.target.closest('[data-ftab]');
-  if (ft) { S.ftab = ft.dataset.ftab; render(); if (S.ftab === 'teams') loadTeams(); return; }
+  if (ft) { S.ftab = ft.dataset.ftab; render(); if (S.ftab === 'teams') loadTeams(); if (S.ftab === 'feed') loadFeed(); return; }
+  const rq = e.target.closest('[data-rxq]');
+  if (rq) { react(rq.dataset.rxq, 'alkis'); return; }
+  const rb = e.target.closest('[data-rx]');
+  if (rb) { react(rb.dataset.ev, rb.dataset.rx); return; }
+  const rn = e.target.closest('[data-rxnote]');
+  if (rn) { rxNoteOpen = rxNoteOpen === rn.dataset.rxnote ? '' : rn.dataset.rxnote; renderFriends(); if (rxNoteOpen && $('rxNoteIn')) $('rxNoteIn').focus(); return; }
+  const rs = e.target.closest('[data-rxsend]');
+  if (rs) { const ev = (FEED || []).find(x => x.id === rs.dataset.rxsend); if (ev && ev.tepkim) react(ev.id, ev.tepkim, $('rxNoteIn').value, true); return; }
   const tb = e.target.closest('[data-team]');
   if (tb) { openTeam(tb.dataset.team); return; }
   if (e.target.closest('[data-newteam]')) { openNewTeam(); return; }
@@ -1556,6 +1670,8 @@ function fillAccount() {
   $('accNameIn').value = PROFILE.full_name;
   $('shareIn').checked = PROFILE.share_progress !== false;
   $('adminLink').hidden = !PROFILE.is_admin;
+  $('toneWrap').hidden = !HAS_FEED; drawTone();
+  document.querySelectorAll('[data-feedonly]').forEach(el => { el.hidden = !HAS_FEED; });
   updateNotifUi();
 }
 $('nameForm').addEventListener('submit', async e => {
@@ -1717,6 +1833,72 @@ document.querySelectorAll('[data-pref]').forEach(el => el.addEventListener('chan
   if (error) { el.checked = !on; toast(hataMesaji(error)); return; }
   PROFILE[k] = on;
 }));
+
+// ---- akış ve tepkiler ----
+// Son 30 günün olayları: arkadaşların seri dönüm noktaları ve ekiplerde bitirilen ortak işler
+let HAS_FEED = false, FEED = null, rxNoteOpen = '';
+const RX = { alkis: { e: '👏', n: 'Alkış' }, harika: { e: '🔥', n: 'Harika' }, guclu: { e: '💪', n: 'Güçlü' }, sevgi: { e: '❤️', n: 'Sevgiler' } };
+const feedSeenKey = () => 'gunluk-rutin-akis-' + USER.id;
+const feedSeen = () => { try { return localStorage.getItem(feedSeenKey()) || ''; } catch (e) { return ''; } };
+function feedUnread() {
+  if (!HAS_FEED || !FEED || !USER) return 0;
+  const seen = feedSeen();
+  return FEED.filter(x => (!x.benim && x.created_at > seen) || (x.benim && x.son_tepki && x.son_tepki > seen)).length;
+}
+function markFeedSeen() {
+  if (!FEED || !FEED.length) return;
+  const last = FEED.reduce((m, x) => [x.created_at, x.son_tepki || ''].reduce((a, b) => (b > a ? b : a), m), '');
+  if (last > feedSeen()) { try { localStorage.setItem(feedSeenKey(), last); } catch (e) {} $('cntFriends').textContent = (FR || []).filter(f => f.status === 'pending' && f.gelen).length || ''; }
+}
+async function loadFeed() {
+  if (!HAS_FEED) return;
+  const { data, error } = await sb.rpc('akis');
+  if (error) return;
+  FEED = data || [];
+  renderFriends();
+}
+// Arkadaşın son 2 gündeki seri dönüm noktası (listede tebrik düğmesi için)
+const friendMilestone = id => (FEED || []).find(x => x.kind === 'seri' && x.user_id === id && Date.now() - Date.parse(x.created_at) < 2 * 864e5);
+const evText = x => x.kind === 'seri'
+  ? (x.benim ? `<b>${x.value} günlük seriye</b> ulaştın` : `<b>${esc(x.ad)}</b> ${x.value} günlük seriye ulaştı`)
+  : (x.benim ? `<b>"${esc(x.task_name || 'Ortak iş')}"</b> işini bitirdin` : `<b>${esc(x.ad)}</b>, "${esc(x.task_name || 'ortak iş')}" işini bitirdi`);
+function feedHtml() {
+  if (FEED === null) return `<p class="loading">Akış yükleniyor…</p>`;
+  if (!FEED.length) return `<div class="empty"><h2>Akış şimdilik sessiz</h2><p>Arkadaşların seri dönüm noktalarına ulaştığında (3, 7, 14, 30… gün) ve ekiplerinde ortak işler bitirildiğinde burada görünür. Tepki göndererek onları tebrik edebilirsin.</p></div>`;
+  return `<ul class="feed">` + FEED.map(x => {
+    const counts = x.sayilar || {};
+    let h = `<li class="ev${x.benim ? ' mine' : ''}"><span class="av" aria-hidden="true">${esc(initials(x.ad))}</span><div class="ev-b"><p class="ev-t">${evText(x)}</p><span class="sub">${[ago(x.created_at), x.team_name ? esc(x.team_name) : ''].filter(Boolean).join(' · ')}</span>`;
+    if (x.benim) {
+      const who = x.tepkiler || [];
+      h += who.length ? `<ul class="rx-who">${who.map(r => `<li>${RX[r.emoji] ? RX[r.emoji].e : ''} <b>${esc(r.ad)}</b>${r.not ? ` · ${esc(r.not)}` : ''}</li>`).join('')}</ul>` : `<span class="sub">Henüz tepki yok.</span>`;
+    } else {
+      h += `<div class="rx" role="group" aria-label="Tepki gönder">` + Object.entries(RX).map(([k, r]) => `<button type="button" data-rx="${k}" data-ev="${x.id}" aria-pressed="${x.tepkim === k}" title="${r.n}" aria-label="${r.n}${counts[k] ? ', ' + counts[k] : ''}"><span class="e">${r.e}</span>${counts[k] ? counts[k] : r.n}</button>`).join('') + `</div>`;
+      if (x.tepkim) h += rxNoteOpen === x.id
+        ? `<div class="rx-note"><input id="rxNoteIn" maxlength="80" placeholder="Kısa not (isteğe bağlı)" value="${esc(x.notum || '')}" aria-label="Tepki notu"><button class="btn primary sm" type="button" data-rxsend="${x.id}">Gönder</button></div>`
+        : `<button class="link" type="button" data-rxnote="${x.id}" style="justify-self:start">${x.notum ? `Notun: "${esc(x.notum)}" · düzenle` : 'Not ekle'}</button>`;
+    }
+    return h + `</div></li>`;
+  }).join('') + `</ul>`;
+}
+// Tepki gönder, değiştir ya da (aynısına basınca) geri al
+async function react(id, emoji, note, keep) {
+  const x = (FEED || []).find(e => e.id === id); if (!x) return;
+  const old = { tepkim: x.tepkim, notum: x.notum, sayilar: { ...(x.sayilar || {}) } };
+  const next = !keep && x.tepkim === emoji ? null : emoji;
+  const sayilar = { ...(x.sayilar || {}) };
+  if (x.tepkim) sayilar[x.tepkim] = Math.max(0, (sayilar[x.tepkim] || 1) - 1);
+  if (next) sayilar[next] = (sayilar[next] || 0) + 1;
+  Object.assign(x, { tepkim: next, notum: next ? (note !== undefined ? note.trim() : x.notum) : null, sayilar });
+  if (keep) rxNoteOpen = '';
+  else if (next && !old.tepkim) rxNoteOpen = id;
+  else if (!next) rxNoteOpen = '';
+  if (next) buzz(15);
+  renderFriends();
+  const { error } = await sb.rpc('tepki_ver', { p_event: id, p_emoji: next, p_not: next ? (x.notum || null) : null });
+  if (error) { Object.assign(x, old); renderFriends(); toast(hataMesaji(error)); return; }
+  if (keep) toast('Notun gönderildi.');
+  else if (next && S.ftab !== 'feed') toast(`${RX[next].e} gönderildi. Akış'tan değiştirebilirsin.`);
+}
 
 // ---- dürtme ----
 const POKE_ERR = {
@@ -2639,7 +2821,7 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (!loaded) return;
   if (document.hidden) { clearTimeout(syncTimer); sync(); }
-  else { reloadFromServer(); touchSeen(); loadFriends(); loadShares(); }
+  else { reloadFromServer().then(loadFeed); touchSeen(); loadFriends(); loadShares(); }
 });
 
 // ---- açılış ----
@@ -2670,6 +2852,7 @@ async function boot() {
   loadFriends();
   if (S.ftab === 'teams') loadTeams();
   loadShares();
+  loadFeed();
 }
 // Sunucudaki hâli yükler. Uygulamaya dönülünce de çağrılır; ekip başkanının verdiği yeni görevler böyle gelir.
 // Gönderilmemiş değişiklik varsa yerel hâl korunur.
@@ -2680,16 +2863,19 @@ async function reloadFromServer(first) {
       || Object.entries(S.days).some(([k, r]) => synced.days.get(k) !== JSON.stringify(dayRow(k, r)));
     if (pending) { render(); return null; }
   }
-  const [p, t, d, v, v2] = await Promise.all([
+  const [p, t, d, v, v2, v3] = await Promise.all([
     sb.from('profiles').select('full_name, friend_code, is_admin, best_streak, share_progress, remind_morning, remind_evening, weekly_summary, allow_poke, morning_time, evening_time, remind_tasks').eq('id', USER.id).single(),
     sb.from('tasks').select('*, teams!tasks_team_fk(name)').order('position'), // ekip adı: görevin kendi ekibi (paylaşım tablosu ikinci bir bağ oluşturuyor)
     sb.from('day_logs').select('*').gte('day', shift(today(), -400)),
     sb.rpc('gorev_verenler'),
-    sb.from('tasks').select('remind_before').limit(1)
+    sb.from('tasks').select('remind_before').limit(1),
+    sb.from('profiles').select('message_tone, notify_reactions, notify_milestones').eq('id', USER.id).single()
   ]);
+  HAS_FEED = !v3.error && !!v3.data;
   HAS_REMIND = !v2.error;
   if (p.error || t.error || d.error) return p.error || t.error || d.error;
   PROFILE = p.data;
+  if (HAS_FEED) Object.assign(PROFILE, v3.data);
   fillAccount();
   const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed, notifLater: S.notifLater };
   S = Object.assign(blank(), ui);
