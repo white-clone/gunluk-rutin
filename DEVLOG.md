@@ -30,8 +30,30 @@ Yapılan değişiklikler:
 - Bloğa dokununca düzenleme penceresi; boş saate dokununca o gün + saatle "Yeni iş" penceresi (geçmiş günde yalnızca gün seçilir).
 - Sekmeler eski haliyle üstte (hap şeklinde). Tema seçimi hesap penceresinde kaldı; + düğmesi sağ altta.
 
+## 2026-10-06 — Tasarım konuşması ve kararlar
+- Hedef kitle: herkes (genel alışkanlık takibi). Ana ekranda önce günün listesi görünmeli.
+- Sosyal taraf: ekip içi planlama ve görev paylaşımı kolaylaşmalı.
+- His: "arada" — sade zemin, bitirince ve seri anlarında güçlü geri bildirim.
+- Hatırlatma süresi: herkese gider (sahibi, görev alan, görevi veren, paylaşılanlar); hazır seçenekler; herkes kendi süresini seçer.
+
+## 2026-10-06 — Görev başına hatırlatma süresi
+- Yeni iş ve düzenleme penceresinde "Hatırlat": Yok, Tam saatinde, 5/10/15/30 dk, 1 saat, 1 gün önce (yalnızca saati olan işte).
+- Görev verirken (ekip penceresi ve "Görev olarak ver") süre seçilir; üyeye varsayılan olur, üye değiştirebilir.
+  Başkana da bu sürede "Üye adı · 15 dk sonra başlıyor" bildirimi gider (üye bitirmediyse).
+- Paylaşılan planlarda takvimin gün ayrıntısında herkes kendi süresini seçer; seçmezse paylaşanın süresi geçerli.
+  Plan "Listeme ekle" ile kopyalanınca planın hatırlatması kapanır, kopya aynı süreyi alır (çift bildirim olmaz).
+- Satırda zil simgesi: 0'dan büyük süre seçili işlerde.
+- Veritabanı: `supabase/12-hatirlatma-suresi.sql` (remind_before, giver_remind, plan_reminders, plan_hatirlat,
+  plan_hatirlatmalarim, gorev_ver'e p_hatirlat, hatirlatma_listesi yenilendi). Edge Function değişmedi.
+- Mevcut işler varsayılan "Tam saatinde" (eski davranış korunur).
+- SQL çalıştırılmadan uygulama eskisi gibi çalışır; Hatırlat seçimi görünmez.
+- Yerel Postgres 16'da bütün SQL dosyaları sırayla çalıştırıldı, hatırlatma listesi örnek verilerle doğrulandı.
+
 ## Sıradaki adımlar
-- 11-ekipten-arkadas.sql Supabase SQL Editor'de çalıştırılacak.
+- 11 ve 12 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
+- Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
+- Ekip müsaitlik görünümü (haftalık çizelgede üyelerin dolu saatleri).
+- Kutlama ve titreşim.
 - 6: Kaydırma hareketleri (sağa: bitti, sola: paylaş/sil).
 - 7: Bitti animasyonu, titreşim, 7/30/100 gün kutlaması.
 - 8: "Şimdi" kartını küçültme, seri bölümünü ayrı sayfaya taşıma.

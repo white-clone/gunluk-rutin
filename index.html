@@ -153,6 +153,9 @@ button.mk::after,.mark::after{content:"";position:absolute;inset:-12px -6px}
 .range input{min-width:0}
 .field .range input{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-md);padding:11px 12px;color:var(--ink)}
 .range span{color:var(--ink-muted)}
+.mini.rem{margin-top:var(--space-2);max-width:220px}
+.mini.rem .sel,.assign .sel{padding:8px 10px;font:500 14px/20px var(--font-sans)}
+.plan-rem{border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-sm);padding:6px 8px;font:500 13px/18px var(--font-sans);color:var(--ink);max-width:150px}
 .time-in{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:5px 6px;font:500 13px/18px var(--font-mono);color:var(--ink);min-width:0}
 .members{display:grid;gap:var(--space-3)}
 .crow-r{display:flex;align-items:center;gap:2px}
@@ -383,7 +386,7 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
     <div class="seg" role="group" aria-label="Tür"><button type="button" data-atyp="daily">Tekrarlı</button><button type="button" data-atyp="general">Tek seferlik</button></div>
     <div class="field" id="aDaysWrap"><span class="lbl">GÜNLER</span><div class="days" id="aDays"></div><span class="hint" id="aDaysHint"></span></div>
     <div class="field" id="aDueWrap"><label for="aDue">TARİH (İSTEĞE BAĞLI)</label><input id="aDue" type="date"><span class="hint">Tarih verirsen takvimde o günde görünür; seriye sayılmaz.</span></div>
-    <div class="field"><span class="lbl">ZAMAN</span><label class="toggle" for="aAllDay"><input type="checkbox" id="aAllDay" checked><span class="fn"><span class="t">Tüm gün</span><span class="sub">Belli bir saati yok.</span></span></label><div class="range" id="aRange" hidden><input id="aTime" type="time" aria-label="Başlangıç saati"><span>–</span><input id="aEnd" type="time" aria-label="Bitiş saati"></div></div>
+    <div class="field"><span class="lbl">ZAMAN</span><label class="toggle" for="aAllDay"><input type="checkbox" id="aAllDay" checked><span class="fn"><span class="t">Tüm gün</span><span class="sub">Belli bir saati yok.</span></span></label><div class="range" id="aRange" hidden><input id="aTime" type="time" aria-label="Başlangıç saati"><span>–</span><input id="aEnd" type="time" aria-label="Bitiş saati"></div><label class="mini rem" id="aRemindWrap">Hatırlat<select class="sel" id="aRemind"></select></label></div>
     <div class="field" id="aDurWrap"><label for="aDur">SÜRE (DAKİKA, İSTEĞE BAĞLI)</label><input id="aDur" type="number" min="0" max="600" inputmode="numeric"></div>
     <div class="field"><label for="aNote">NOT (İSTEĞE BAĞLI)</label><textarea id="aNote" maxlength="500" rows="2" placeholder="Hatırlatma, bağlantı, liste…"></textarea></div>
     <details class="acc-sec" id="aShareSec"><summary>PAYLAŞ (İSTEĞE BAĞLI)</summary><div id="aShare"></div></details>
@@ -401,7 +404,7 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
       <div class="seg"><button type="button" data-type="daily" id="segDaily">Tekrarlı</button><button type="button" data-type="general" id="segGeneral">Tek seferlik</button></div>
     </div>
     <div class="field" id="fDurWrap"><label for="fDur">SÜRE (DAKİKA, İSTEĞE BAĞLI)</label><input id="fDur" type="number" min="0" max="600" inputmode="numeric"></div>
-    <div class="field" id="fTimeWrap"><span class="lbl">ZAMAN</span><label class="toggle" for="fAllDay"><input type="checkbox" id="fAllDay"><span class="fn"><span class="t">Tüm gün</span><span class="sub">Belli bir saati yok.</span></span></label><div class="range" id="fRange"><input id="fTime" type="time" aria-label="Başlangıç saati"><span>–</span><input id="fEnd" type="time" aria-label="Bitiş saati"></div><span class="hint" id="fRangeHint">Yalnızca başlangıç da yazabilirsin. Saati olan işler sırada saate göre yer alır; bildirimler açıksa başlangıçta hatırlatılır.</span></div>
+    <div class="field" id="fTimeWrap"><span class="lbl">ZAMAN</span><label class="toggle" for="fAllDay"><input type="checkbox" id="fAllDay"><span class="fn"><span class="t">Tüm gün</span><span class="sub">Belli bir saati yok.</span></span></label><div class="range" id="fRange"><input id="fTime" type="time" aria-label="Başlangıç saati"><span>–</span><input id="fEnd" type="time" aria-label="Bitiş saati"></div><label class="mini rem" id="fRemindWrap">Hatırlat<select class="sel" id="fRemind"></select></label><span class="hint" id="fRangeHint">Yalnızca başlangıç da yazabilirsin. Saati olan işler sırada saate göre yer alır; bildirimler açıksa seçtiğin süre kadar önce hatırlatılır.</span></div>
     <div class="field" id="fDaysWrap"><span class="lbl">GÜNLER</span><div class="days" id="fDays"></div><span class="hint" id="fDaysHint"></span></div>
     <label class="toggle" for="fPoke" id="fPokeWrap"><input type="checkbox" id="fPoke"><span class="fn"><span class="t">Arkadaşlarım bu iş için beni dürtebilsin</span><span class="sub">İşin adı arkadaşlarına görünür; bitirmediysen sana bildirim gönderebilirler.</span></span></label>
     <div class="field" id="fDueWrap"><label for="fDue">TARİH (İSTEĞE BAĞLI)</label><input id="fDue" type="date"></div>
@@ -438,7 +441,7 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
         <label class="toggle" for="nMorning"><input type="checkbox" id="nMorning" data-pref="remind_morning"><span class="fn"><span class="t">Sabah hatırlatması</span><span class="sub">Bugünkü işlerin, şu saatte: <input class="time-in" type="time" data-pref-time="morning_time" aria-label="Sabah hatırlatma saati"></span></span></label>
         <label class="toggle" for="nEvening"><input type="checkbox" id="nEvening" data-pref="remind_evening"><span class="fn"><span class="t">Akşam hatırlatması</span><span class="sub">Yalnızca bitmemiş iş varsa, şu saatte: <input class="time-in" type="time" data-pref-time="evening_time" aria-label="Akşam hatırlatma saati"></span></span></label>
         <label class="toggle" for="nWeekly"><input type="checkbox" id="nWeekly" data-pref="weekly_summary"><span class="fn"><span class="t">Haftalık özet</span><span class="sub">Pazar 20:00'de haftanın özeti.</span></span></label>
-        <label class="toggle" for="nTasks"><input type="checkbox" id="nTasks" data-pref="remind_tasks"><span class="fn"><span class="t">Görev saatinde hatırlat</span><span class="sub">Saati olan iş o saatte bitmemişse bildirim gelir.</span></span></label>
+        <label class="toggle" for="nTasks"><input type="checkbox" id="nTasks" data-pref="remind_tasks"><span class="fn"><span class="t">Görev hatırlatmaları</span><span class="sub">Saati olan işler, her işte seçtiğin süre kadar önce hatırlatılır (paylaşılan planlar ve verdiğin görevler dahil).</span></span></label>
         <label class="toggle" for="nPoke"><input type="checkbox" id="nPoke" data-pref="allow_poke"><span class="fn"><span class="t">Arkadaşlarım beni dürtebilsin</span><span class="sub">23:00–08:00 arası dürtme gelmez.</span></span></label>
       </div>
     </details>
@@ -497,6 +500,7 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
     <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
     <div><h2>Görev olarak ver</h2><p class="hint" id="gpWhat"></p></div>
     <div class="field"><label for="gpTeam">EKİP</label><select id="gpTeam" class="sel"></select></div>
+    <div class="field" id="gpRemindWrap"><label for="gpRemind">HATIRLAT</label><select id="gpRemind" class="sel"></select><span class="hint">Seçtiğin kişilere varsayılan olur, kendileri değiştirebilir. Bitirmezlerse sana da bu sürede haber gelir.</span></div>
     <div class="field"><label for="gpNote">NOT (İSTEĞE BAĞLI)</label><textarea id="gpNote" maxlength="500" rows="2" placeholder="Görevle ilgili açıklama"></textarea></div>
     <div class="field"><span class="lbl">KİME</span><div id="gpMembers"></div><span class="hint">Görev seçtiğin kişilerin listesine ve takvimine, senin verdiğin bilgisiyle düşer.</span></div>
     <div class="row-btns"><span class="grow"></span><button type="button" class="btn ghost" data-close>Vazgeç</button><button type="submit" class="btn primary" id="gpSave">Görevi ver</button></div>
@@ -596,7 +600,7 @@ function save() {
 // ---- eşitleme ----
 // Son eşitlenen hâl satır satır tutulur; yalnızca değişen satırlar gönderilir.
 const synced = { tasks: new Map(), days: new Map(), prof: '' };
-const taskRow = (t, i) => ({ id: t.id, user_id: USER.id, name: t.name, type: t.type, dur: t.type === 'daily' ? (t.dur || 0) : 0, days: t.type === 'daily' ? (t.days || 127) : 127, pokeable: t.type === 'daily' && !!t.pokeable, time: t.time || null, end_time: t.time && t.end ? t.end : null, note: (t.note || '').trim() ? t.note.trim().slice(0, 500) : null, due: t.type === 'general' && t.due ? t.due : null, done: t.type === 'general' && !!t.done, done_at: t.type === 'general' && t.doneAt ? new Date(t.doneAt).toISOString() : null, position: i });
+const taskRow = (t, i) => ({ id: t.id, user_id: USER.id, name: t.name, type: t.type, dur: t.type === 'daily' ? (t.dur || 0) : 0, days: t.type === 'daily' ? (t.days || 127) : 127, pokeable: t.type === 'daily' && !!t.pokeable, time: t.time || null, end_time: t.time && t.end ? t.end : null, note: (t.note || '').trim() ? t.note.trim().slice(0, 500) : null, due: t.type === 'general' && t.due ? t.due : null, done: t.type === 'general' && !!t.done, done_at: t.type === 'general' && t.doneAt ? new Date(t.doneAt).toISOString() : null, position: i, ...(HAS_REMIND ? { remind_before: t.remind === undefined ? 0 : t.remind } : {}) });
 const dayRow = (k, r) => ({ user_id: USER.id, day: k, done: r.done, skip: r.skip, at: r.at || {}, total: r.total || 0, frozen: !!r.frozen });
 // Profildeki özet: en uzun seri ve arkadaşların gördüğü bugünkü ilerleme
 const profRow = () => {
@@ -676,11 +680,13 @@ const notePreview = t => { const n = (t.note || t.assignNote || '').split('\n')[
 // Satırdaki ek bilgiler küçük simgelerle gösterilir: ekip görevi, paylaşıldı, not
 const ico = (svg, label) => `<span class="ic" role="img" title="${esc(label)}" aria-label="${esc(label)}">${svg}</span>`;
 const teamIcon = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="4.5" r="2"/><path d="M1.5 11.5c.4-2 1.8-3.2 3.5-3.2s3.1 1.2 3.5 3.2"/><path d="M9 2.7a1.8 1.8 0 0 1 0 3.6M10.3 8.5c1.1.4 1.8 1.4 2 3"/></svg>';
+const bellIcon = '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 9.5V6.5a3.5 3.5 0 0 1 7 0v3l1 1.5h-9z"/><path d="M5.8 12.2a1.3 1.3 0 0 0 2.4 0"/></svg>';
 const clockIcon = '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="5.5"/><path d="M7 4v3.2l2 1.3"/></svg>';
 const subIcons = t => [
   t.assigned ? ico(teamIcon, assignLabel(t) || 'Ekip görevi') : '',
   isShared(t) ? ico(shareIcon.replace(/width="16" height="16"/, 'width="13" height="13"'), 'Paylaşıldı') : '',
-  notePreview(t) ? ico(noteIcon, 'Not: ' + notePreview(t)) : ''
+  notePreview(t) ? ico(noteIcon, 'Not: ' + notePreview(t)) : '',
+  HAS_REMIND && t.time && t.remind > 0 ? ico(bellIcon, `${remindName(t.remind)} hatırlatılır`) : ''
 ].join('');
 const shareIcon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="3.5" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" stroke="currentColor" stroke-width="1.5"/></svg>';
 // Takvimde silme: ilk basışta 'Sil?' olur, ikinci basışta siler (ekip görevlerinde yok)
@@ -689,6 +695,15 @@ const shareBtn = t => t.assigned ? '' : `<button class="x share${isShared(t) ? '
 // Ekip görevi: kim verdi, hangi ekipten
 const assignLabel = t => t.assigned ? [t.by ? `${t.by} verdi` : '', t.team].filter(Boolean).join(' · ') : '';
 const timeLabel = t => t.time ? (t.end ? `${t.time}–${t.end}` : t.time) : '';
+// Hatırlatma süresi: boş = yok, 0 = tam saatinde (veritabanı 12-hatirlatma-suresi.sql çalıştırılınca açılır)
+let HAS_REMIND = false;
+const REMIND_OPTS = [['', 'Yok'], ['0', 'Tam saatinde'], ['5', '5 dk önce'], ['10', '10 dk önce'], ['15', '15 dk önce'], ['30', '30 dk önce'], ['60', '1 saat önce'], ['1440', '1 gün önce']];
+const remindVal = v => v === null ? '' : String(v === undefined ? 0 : v);
+const remindParse = v => v === '' ? null : +v;
+const remindName = v => (REMIND_OPTS.find(o => o[0] === remindVal(v)) || REMIND_OPTS[1])[1];
+const remindOptions = v => REMIND_OPTS.map(([k, n]) => `<option value="${k}"${k === remindVal(v) ? ' selected' : ''}>${n}</option>`).join('');
+function fillRemind(id, v) { $(id).innerHTML = remindOptions(v); showRemind(id); }
+const showRemind = id => { $(id + 'Wrap').hidden = !HAS_REMIND || $(id === 'aRemind' ? 'aAllDay' : 'fAllDay').checked; };
 const byTime = (a, b) => (a.time || '99:99').localeCompare(b.time || '99:99');
 const todayList = () => daily().filter(t => activeOn(t, today())).sort(byTime);
 // O gün beklenen işler; o güne ait kayıt yoksa bugünkü görevlerden çıkarılır.
@@ -1113,7 +1128,7 @@ let editId = null, editType = 'daily', editDays = 127;
 $('fNote').addEventListener('input', () => { const n = $('fNote').value.length; $('fNoteCount').textContent = n > 400 ? n + '/500' : ''; });
 $('fAllDay').addEventListener('change', () => {
   const on = $('fAllDay').checked;
-  $('fRange').hidden = $('fRangeHint').hidden = on;
+  $('fRange').hidden = $('fRangeHint').hidden = on; showRemind('fRemind');
   if (!on) $('fTime').focus();
 });
 function drawDays() {
@@ -1149,6 +1164,7 @@ function openSheet(id) {
   if (!t.assigned) fillShareBox(t);
   $('fTime').value = t.time || ''; $('fEnd').value = t.end || '';
   $('fAllDay').checked = !t.time; $('fRange').hidden = $('fRangeHint').hidden = !t.time;
+  fillRemind('fRemind', t.remind);
   const locked = !!t.assigned;
   $('fName').disabled = locked; $('segDaily').disabled = locked; $('segGeneral').disabled = locked; $('delBtn').hidden = locked;
   $('fLock').hidden = !locked;
@@ -1187,6 +1203,7 @@ $('sheetForm').addEventListener('submit', e => {
   if (en && !st) { toast('Bitiş saati için başlangıç saatini de yaz.'); return; }
   if (st && en && en <= st) { toast('Bitiş saati başlangıçtan sonra olmalı.'); return; }
   t.time = st || ''; t.end = st ? (en || '') : '';
+  if (HAS_REMIND) t.remind = remindParse($('fRemind').value);
   t.note = $('fNote').value.trim().slice(0, 500);
   if (t.type !== editType) {
     forgetToday(t.id);
@@ -1222,6 +1239,7 @@ function openAdd(type, due, st, en) {
   addTmp = { id: uid() }; addDays = 127;
   $('aName').value = ''; $('aDur').value = ''; $('aNote').value = ''; $('aDue').value = due;
   $('aAllDay').checked = !st; $('aRange').hidden = !st; $('aTime').value = st || ''; $('aEnd').value = en || '';
+  fillRemind('aRemind', 0);
   $('aShareSec').open = false; $('aShare').innerHTML = '';
   drawAddDays(); setAddType(type);
   $('addSheet').showModal();
@@ -1235,7 +1253,7 @@ $('aDays').addEventListener('click', e => {
   if (!next) { toast('En az bir gün seçili olmalı.'); return; }
   addDays = next; drawAddDays();
 });
-$('aAllDay').addEventListener('change', () => { const on = $('aAllDay').checked; $('aRange').hidden = on; if (!on) $('aTime').focus(); });
+$('aAllDay').addEventListener('change', () => { const on = $('aAllDay').checked; $('aRange').hidden = on; showRemind('aRemind'); if (!on) $('aTime').focus(); });
 $('aShareSec').addEventListener('toggle', () => {
   if (!$('aShareSec').open || $('aShare').innerHTML) return;
   const tmp = addTmp;
@@ -1247,7 +1265,7 @@ $('addForm').addEventListener('submit', e => {
   if (!name) { toast('İşin adını yaz.'); $('aName').focus(); return; }
   const allDay = $('aAllDay').checked, st = allDay ? '' : $('aTime').value, en = allDay ? '' : $('aEnd').value;
   const re = rangeError(st, en); if (re) { toast(re); return; }
-  const base = { id: addTmp.id, name, time: st, end: st ? en : '', note: $('aNote').value.trim().slice(0, 500), created: Date.now() };
+  const base = { id: addTmp.id, name, time: st, end: st ? en : '', remind: remindParse($('aRemind').value), note: $('aNote').value.trim().slice(0, 500), created: Date.now() };
   const t = addType === 'daily'
     ? Object.assign(base, { type: 'daily', dur: Math.max(0, Math.min(600, parseInt($('aDur').value, 10) || 0)), days: addDays })
     : Object.assign(base, { type: 'general', due: $('aDue').value || '', done: false });
@@ -1751,6 +1769,7 @@ const assignForm = uid => `<form class="assign" data-assign="${uid}" data-mask="
   <div class="days" data-adays>${DAY_NAMES.map((n, i) => `<button type="button" data-aday="${i}" aria-pressed="true">${n}</button>`).join('')}</div>
   <div class="assign-row" data-daily-only><label class="mini">Başlangıç<input type="time" name="saat"></label><label class="mini">Bitiş<input type="time" name="bitis"></label><label class="mini">Süre (dk)<input type="number" name="sure" min="0" max="600" inputmode="numeric"></label></div>
   <div class="assign-row" data-general-only hidden><label class="mini">Son tarih<input type="date" name="son"></label></div>
+  ${HAS_REMIND ? `<label class="mini">Hatırlat (saati varsa)<select class="sel" name="hatirlat">${remindOptions(0)}</select></label>` : ''}
   <textarea name="not" maxlength="500" rows="2" placeholder="Not (isteğe bağlı)" aria-label="Görev notu"></textarea>
   <button class="btn primary sm" type="submit">Görevi ver</button>
 </form>`;
@@ -1931,7 +1950,7 @@ $('tmBody').addEventListener('submit', async e => {
   const { data: id, error } = await sb.rpc('gorev_ver', {
     p_team: TEAM.id, p_uye: f.dataset.assign, p_ad: name, p_tur: f.dataset.type,
     p_gunler: daily ? +f.dataset.mask : 127, p_saat: daily && v('saat') ? v('saat') : null, p_bitis: daily && v('saat') && v('bitis') ? v('bitis') : null,
-    p_sure: daily ? (parseInt(v('sure'), 10) || 0) : 0, p_son: !daily && v('son') ? v('son') : null, p_not: v('not').trim() || null
+    p_sure: daily ? (parseInt(v('sure'), 10) || 0) : 0, p_son: !daily && v('son') ? v('son') : null, p_not: v('not').trim() || null, ...(HAS_REMIND ? { p_hatirlat: remindParse(v('hatirlat')) } : {})
   });
   btn.disabled = false;
   if (error) { toast(teamError(error)); return; }
@@ -2102,13 +2121,22 @@ function calDayHtml(k) {
   const plans = plansOn(k);
   if (plans.length) {
     h += `<p class="sec">PAYLAŞILAN PLANLAR</p><ul class="list">` + plans.map(p =>
-      `<li class="crow"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col"><button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && (TEAMS || []).some(x => x.id === p.team_id && x.lider_mi) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
+      `<li class="crow"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col">${HAS_REMIND && p.saat && PLAN_REM.has(p.task_id) ? `<select class="plan-rem" data-planrem="${p.task_id}" aria-label="${esc(p.name)} için hatırlatma">${remindOptions(PLAN_REM.get(p.task_id))}</select>` : ''}<button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && (TEAMS || []).some(x => x.id === p.team_id && x.lider_mi) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
   }
   if (!dailyTasks.length && !dueTasks.length && !plans.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
   if (k === shift(t, -1) && s !== 'full' && s !== 'rest' && s !== 'none') h += `<button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`;
   if (k >= t) h += `<button class="btn secondary sm" type="button" data-addday="${k}">+ Bu güne iş ekle</button>`;
   return h + `</div>`;
 }
+// Paylaşılan planın hatırlatmasını kişi kendisi seçer
+$('view-calendar').addEventListener('change', async e => {
+  const sel = e.target.closest('[data-planrem]'); if (!sel) return;
+  const id = sel.dataset.planrem, dk = remindParse(sel.value), old = PLAN_REM.get(id);
+  PLAN_REM.set(id, dk);
+  const { error } = await sb.rpc('plan_hatirlat', { p_task: id, p_dk: dk });
+  if (error) { PLAN_REM.set(id, old); sel.value = remindVal(old); toast(hataMesaji(error)); return; }
+  toast(dk === null ? 'Bu plan için hatırlatma kapandı.' : `Bu plan ${remindName(dk).toLocaleLowerCase('tr')} hatırlatılacak.`);
+});
 $('view-calendar').addEventListener('click', e => {
   const cv = e.target.closest('[data-calview]');
   if (cv) { calView = cv.dataset.calview; calMonth = calSel.slice(0, 7); renderCalendar(); return; }
@@ -2156,11 +2184,12 @@ $('view-calendar').addEventListener('click', e => {
 // Kişi kendi planladığı işi sonradan ekipleriyle paylaşır; paylaşılan iş ekip üyelerinin takviminde "ekip planı" olarak görünür.
 // SHARES: işin paylaşıldığı ekipler, FSHARES: işin paylaşıldığı arkadaşlar.
 // PLANS: başkalarının benimle paylaştığı planlar (kind: 'team' ekip planı, 'friend' arkadaşın ortak planı).
-let SHARES = new Map(), FSHARES = new Map(), PLANS = [];
+let SHARES = new Map(), FSHARES = new Map(), PLANS = [], PLAN_REM = new Map();
 const isShared = t => !!((SHARES.get(t.id) || new Set()).size || (FSHARES.get(t.id) || new Set()).size);
 const toMap = (rows, key) => { const m = new Map(); for (const r of rows || []) { if (!m.has(r.task_id)) m.set(r.task_id, new Set()); m.get(r.task_id).add(r[key]); } return m; };
 async function loadShares() {
-  const [s, p, fs, fp] = await Promise.all([sb.rpc('paylasimlarim'), sb.rpc('ekip_planlari'), sb.rpc('arkadas_paylasimlarim'), sb.rpc('ortak_planlar')]);
+  const [s, p, fs, fp, pr] = await Promise.all([sb.rpc('paylasimlarim'), sb.rpc('ekip_planlari'), sb.rpc('arkadas_paylasimlarim'), sb.rpc('ortak_planlar'), HAS_REMIND ? sb.rpc('plan_hatirlatmalarim') : { error: true }]);
+  if (!pr.error) PLAN_REM = new Map((pr.data || []).map(r => [r.task_id, r.dk]));
   if (!s.error) SHARES = toMap(s.data, 'team_id');
   if (!fs.error) FSHARES = toMap(fs.data, 'friend_id');
   const team = p.error ? PLANS.filter(x => x.kind === 'team') : (p.data || []).map(x => ({ ...x, kind: 'team' }));
@@ -2187,7 +2216,7 @@ async function fillShareBox(t, box = $('fShare'), stillOpen = () => editId === t
   if (teams.length) h += `<span class="eyebrow">EKİPLER</span><div class="checks">` + teams.map(tm => `<label class="check"><input type="checkbox" data-share="${tm.id}"${onT.has(tm.id) ? ' checked' : ''}><span class="fn"><span class="t">${esc(tm.name)}</span><span class="sub">${tm.uye_sayisi} kişi</span></span></label>`).join('') + `</div>`;
   box.innerHTML = `<div class="share-box">${h}</div>`;
 }
-const giveItem = (t, name) => ({ name: name || t.name, type: t.type, days: t.days, time: t.time, end: t.end, due: t.due, dur: t.dur });
+const giveItem = (t, name) => ({ name: name || t.name, type: t.type, days: t.days, time: t.time, end: t.end, due: t.due, dur: t.dur, remind: t.remind });
 $('fGive').addEventListener('click', () => {
   const t = find(editId); if (!t) return;
   openGive(giveItem(t, $('fName').value.trim()));
@@ -2246,6 +2275,11 @@ function copyPlan(id, k) {
   const p = PLANS.find(x => x.task_id === id); if (!p) return;
   if (p.type === 'general') S.tasks.push({ id: uid(), name: p.name, type: 'general', due: p.due || k, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', done: false, created: Date.now() });
   else S.tasks.push({ id: uid(), name: p.name, type: 'daily', dur: 0, days: p.days || 127, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', created: Date.now() });
+  // Kopyalanan iş planın hatırlatmasını devralır; aynı iş için iki bildirim gelmesin diye plan hatırlatması kapanır
+  if (HAS_REMIND && PLAN_REM.has(id)) {
+    S.tasks[S.tasks.length - 1].remind = PLAN_REM.get(id);
+    if (PLAN_REM.get(id) !== null) { PLAN_REM.set(id, null); sb.rpc('plan_hatirlat', { p_task: id, p_dk: null }).then(() => {}, () => {}); }
+  }
   render();
   toast(`"${p.name}" listene eklendi.`);
 }
@@ -2266,6 +2300,7 @@ async function openGive(item, teamId) {
   $('gpTeam').innerHTML = led.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
   if (teamId && led.some(t => t.id === teamId)) $('gpTeam').value = teamId;
   $('gpMembers').innerHTML = ''; $('gpNote').value = '';
+  $('gpRemind').innerHTML = remindOptions(item.remind); $('gpRemindWrap').hidden = !HAS_REMIND || !item.time;
   $('givePick').showModal();
   await fillGiveMembers();
 }
@@ -2291,7 +2326,7 @@ $('giveForm').addEventListener('submit', async e => {
     const { data: gid, error } = await sb.rpc('gorev_ver', {
       p_team: $('gpTeam').value, p_uye: id, p_ad: GIVE.name, p_tur: GIVE.type,
       p_gunler: GIVE.days || 127, p_saat: GIVE.time || null, p_bitis: GIVE.time && GIVE.end ? GIVE.end : null,
-      p_sure: GIVE.dur || 0, p_son: GIVE.type === 'general' && GIVE.due ? GIVE.due : null, p_not: $('gpNote').value.trim() || null
+      p_sure: GIVE.dur || 0, p_son: GIVE.type === 'general' && GIVE.due ? GIVE.due : null, p_not: $('gpNote').value.trim() || null, ...(HAS_REMIND ? { p_hatirlat: remindParse($('gpRemind').value) } : {})
     });
     if (error) { err = error; continue; }
     ok++;
@@ -2382,7 +2417,7 @@ $('importFile').addEventListener('change', async e => {
     for (const t of data.tasks) {
       if (!t || typeof t.name !== 'string' || !['daily', 'general'].includes(t.type)) continue;
       const nid = uid(); idMap[t.id] = nid; added++;
-      S.tasks.push({ id: nid, name: t.name.slice(0, 80), type: t.type, dur: Math.max(0, Math.min(600, parseInt(t.dur, 10) || 0)), due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : '', done: !!t.done, doneAt: +t.doneAt || 0, days: (parseInt(t.days, 10) >= 1 && parseInt(t.days, 10) <= 127) ? parseInt(t.days, 10) : 127, time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : '', end: /^\d{2}:\d{2}$/.test(t.end || '') ? t.end : '', note: typeof t.note === 'string' ? t.note.slice(0, 500) : '', created: +t.created || Date.now() });
+      S.tasks.push({ id: nid, name: t.name.slice(0, 80), type: t.type, dur: Math.max(0, Math.min(600, parseInt(t.dur, 10) || 0)), due: /^\d{4}-\d{2}-\d{2}$/.test(t.due || '') ? t.due : '', done: !!t.done, doneAt: +t.doneAt || 0, days: (parseInt(t.days, 10) >= 1 && parseInt(t.days, 10) <= 127) ? parseInt(t.days, 10) : 127, time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : '', end: /^\d{2}:\d{2}$/.test(t.end || '') ? t.end : '', note: typeof t.note === 'string' ? t.note.slice(0, 500) : '', remind: [0, 5, 10, 15, 30, 60, 1440].includes(t.remind) ? t.remind : t.remind === null ? null : 0, created: +t.created || Date.now() });
     }
     const m = a => (Array.isArray(a) ? a : []).map(id => idMap[id]).filter(Boolean);
     for (const [k, r] of Object.entries(data.days || {})) {
@@ -2470,18 +2505,20 @@ async function reloadFromServer(first) {
       || Object.entries(S.days).some(([k, r]) => synced.days.get(k) !== JSON.stringify(dayRow(k, r)));
     if (pending) { render(); return null; }
   }
-  const [p, t, d, v] = await Promise.all([
+  const [p, t, d, v, v2] = await Promise.all([
     sb.from('profiles').select('full_name, friend_code, is_admin, best_streak, share_progress, remind_morning, remind_evening, weekly_summary, allow_poke, morning_time, evening_time, remind_tasks').eq('id', USER.id).single(),
     sb.from('tasks').select('*, teams!tasks_team_fk(name)').order('position'), // ekip adı: görevin kendi ekibi (paylaşım tablosu ikinci bir bağ oluşturuyor)
     sb.from('day_logs').select('*').gte('day', shift(today(), -400)),
-    sb.rpc('gorev_verenler')
+    sb.rpc('gorev_verenler'),
+    sb.from('tasks').select('remind_before').limit(1)
   ]);
+  HAS_REMIND = !v2.error;
   if (p.error || t.error || d.error) return p.error || t.error || d.error;
   PROFILE = p.data;
   fillAccount();
   const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed, notifLater: S.notifLater };
   S = Object.assign(blank(), ui);
-  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '', note: r.note || '', assignNote: r.assign_note || '' }));
+  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '', note: r.note || '', assignNote: r.assign_note || '', remind: r.remind_before === undefined ? 0 : r.remind_before }));
   for (const x of (v.error ? [] : v.data || [])) { const k = S.tasks.find(y => y.id === x.task_id); if (k) { k.by = x.veren || ''; if (x.ekip) k.team = x.ekip; } }
   for (const r of d.data) S.days[r.day] = { done: r.done || [], skip: r.skip || [], at: r.at || {}, total: r.total || 0, frozen: !!r.frozen };
   S.best = PROFILE.best_streak || 0;

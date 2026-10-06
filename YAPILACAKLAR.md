@@ -33,6 +33,10 @@
 - [x] Ekip penceresinde üyeye dokunarak arkadaşlık isteği (supabase/11-ekipten-arkadas.sql).
 - [ ] 11-ekipten-arkadas.sql Supabase'de çalıştırılacak.
 
+## G. Hatırlatma süresi
+- [x] Görev başına "kaç dk önce" (sahip, görev alan, görevi veren, paylaşılanlar; herkes kendi seçer).
+- [ ] 12-hatirlatma-suresi.sql Supabase'de çalıştırılacak (11'den sonra).
+
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.
       Authentication → Emails → SMTP Settings. Kurulmadan doğrulama ve şifre sıfırlama
