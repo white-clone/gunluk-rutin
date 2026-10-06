@@ -1,5 +1,5 @@
 // Günlük Rutin service worker: uygulama kabuğunu önbellekte tutar, bildirimleri gösterir.
-const CACHE = 'gunluk-rutin-v1';
+const CACHE = 'gunluk-rutin-v2';
 const SHELL = ['./', 'index.html', 'giris.html', 'sifre.html', 'tema.css', 'ayar.js', 'manifest.webmanifest', 'ikon-192.png', 'ikon-512.png'];
 
 self.addEventListener('install', e => {
