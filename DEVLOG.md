@@ -74,10 +74,16 @@ Kullanıcı denemeden kodlamaya geçilmeyecek. Kararlar:
 - Akış: ayrı 4. sekme. Olaylar: seri dönüm noktası, ortak iş bitirdi.
 - Arkadaşlar listesinde tepki düğmesi; bildirimler (tepki aldın, arkadaş dönüm noktası) ayrı ayrı açılıp kapanır.
 - Seri koruma: mevcut akşam hatırlatmasına "serin tehlikede · X iş kaldı · izin hakkı" eklenir.
-Açık sorular: listede tepki düğmesi ne zaman, gizlilik (ilerleme paylaşımı kapalıysa), akış süresi,
-olay başına tek/çok tepki, 4 sekmenin telefonda sığması.
+Netleşenler:
+- Arkadaş listesinde tepki düğmesi yalnızca dönüm noktasında çıkar.
+- İlerleme paylaşımı kapalı olanın seri olayları akışta gizlenir (ortak iş olayları ekip içinde görünür).
+- Akış son 30 günü gösterir.
+- Olay başına tek tepki; değiştirilebilir, aynısına basınca geri alınır.
+- Akış ayrı sekme değil: Arkadaşlar sekmesinde 3. bölüm (Arkadaşlar | Ekipler | Akış).
+- Ana sekmelere simge eklenir (yazılar kalır); Arkadaşlar rozeti = istekler + yeni tepki/olay.
 
 ## Sıradaki adımlar
+- Kullanıcı siteyi deneyip onay verince tebrik/akış tasarımı kodlanacak.
 - 11, 12 ve 13 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
 - Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
 - Ekip müsaitlik görünümü (haftalık çizelgede üyelerin dolu saatleri).
