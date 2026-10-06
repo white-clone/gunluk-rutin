@@ -64,6 +64,19 @@ Yapılan değişiklikler:
   hatirlatma_listesi'ne ortak işler eklendi). Yerel Postgres'te izin kuralları ve hatırlatmalar denendi.
 - SQL çalıştırılmadan ortak işler bölümü ve yetki düğmeleri görünmez, gerisi çalışır.
 
+## 2026-10-06 — Tebrik ve kutlama tasarımı (konuşuldu, kod yok)
+Kullanıcı denemeden kodlamaya geçilmeyecek. Kararlar:
+- Kutlama büyüklüğü (öneri 1) değişmeyecek; her gün tam ekran kutlama kalır.
+- Mesaj tonu kullanıcı seçer (Samimi / Sade / Esprili), hesap ayarlarında.
+- Kişisel mesaj: ad, haftalık karşılaştırma, rekora kalan gün, sonraki dönüm noktası.
+- Görsel ilerleme: kutlamada çetele çizgileri tek tek çizilir + sonraki dönüm noktası halkası; seri rozetinde de.
+- Tebrik: tepki (emoji + isteğe bağlı kısa metin): Alkış, Harika, Güçlü, Sevgiler.
+- Akış: ayrı 4. sekme. Olaylar: seri dönüm noktası, ortak iş bitirdi.
+- Arkadaşlar listesinde tepki düğmesi; bildirimler (tepki aldın, arkadaş dönüm noktası) ayrı ayrı açılıp kapanır.
+- Seri koruma: mevcut akşam hatırlatmasına "serin tehlikede · X iş kaldı · izin hakkı" eklenir.
+Açık sorular: listede tepki düğmesi ne zaman, gizlilik (ilerleme paylaşımı kapalıysa), akış süresi,
+olay başına tek/çok tepki, 4 sekmenin telefonda sığması.
+
 ## Sıradaki adımlar
 - 11, 12 ve 13 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
 - Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
