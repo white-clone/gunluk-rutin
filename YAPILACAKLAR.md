@@ -37,6 +37,10 @@
 - [x] Görev başına "kaç dk önce" (sahip, görev alan, görevi veren, paylaşılanlar; herkes kendi seçer).
 - [ ] 12-hatirlatma-suresi.sql Supabase'de çalıştırılacak (11'den sonra).
 
+## H. Ekip ortak işleri ve yetki
+- [x] Ortak işler (her üye yazar/bitirir), yetkili üyeler görev dağıtır, ekip özeti, kutlama ve günün sözü.
+- [ ] 13-ekip-ortak-isler.sql Supabase'de çalıştırılacak (12'den sonra).
+
 ## D. E-posta (kullanıcı bekletti)
 - [ ] E-posta gönderici (SMTP) kur: Gmail uygulama şifresi ya da Brevo.
       Authentication → Emails → SMTP Settings. Kurulmadan doğrulama ve şifre sıfırlama

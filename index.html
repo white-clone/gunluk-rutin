@@ -234,6 +234,23 @@ button.mem{border:0;background:none;padding:4px 0;text-align:left;color:inherit;
 .row.off .mark{border-style:dashed;background:transparent}
 .row.off .t{color:var(--ink-muted);font-weight:500}
 
+/* ekip özeti */
+.tm-sum{display:grid;gap:6px;background:var(--done-soft);border-radius:var(--radius-md);padding:10px 12px;font-size:14px;line-height:20px}
+.tm-sum .bar{background:var(--surface)}
+/* teşvik: günün sözü, bitti animasyonu, kutlama */
+.quote{margin:0;padding:10px 14px;border-left:3px solid var(--accent);background:var(--surface);border-radius:0 var(--radius-md) var(--radius-md) 0;font-size:14px;line-height:20px;color:var(--ink-muted)}
+.quote b{display:block;font:600 11px/16px var(--font-sans);letter-spacing:.06em;color:var(--accent);margin-bottom:2px}
+.row.pop .mark{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.cele{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(8,12,18,.45);padding:var(--space-4);animation:fade .2s ease-out}
+.cele-card{position:relative;background:var(--surface);border-radius:var(--radius-lg);padding:var(--space-8) var(--space-6) var(--space-6);display:grid;gap:var(--space-3);justify-items:center;text-align:center;max-width:340px;width:100%;overflow:hidden;animation:up .35s cubic-bezier(.2,1.4,.4,1)}
+.cele-big{margin:0;font:600 30px/36px var(--font-display);color:var(--streak);text-wrap:balance}
+.cele-sub{margin:0;color:var(--ink-muted)}
+.cele-burst{position:absolute;inset:0;pointer-events:none}
+.cele-burst i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:fall 1.6s ease-in forwards}
+@keyframes fall{to{transform:translateY(420px) rotate(540deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.row.pop .mark,.cele-card,.cele-burst i{animation:none}}
+
 /* bant */
 .banner{display:flex;gap:var(--space-3);align-items:flex-start;justify-content:space-between;background:var(--streak-soft);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);color:var(--ink)}
 .banner strong{color:var(--streak)}
@@ -530,6 +547,20 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
     </div>
   </div>
 </dialog>
+
+<dialog id="ttSheet">
+  <form class="sheet" id="ttForm" method="dialog" novalidate>
+    <div class="sheet-top"><button class="back" type="button" data-close><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><path d="M11 4L6 9l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Geri</button></div>
+    <div><h2 id="ttTitle">Yeni ortak iş</h2><p class="hint" id="ttWho"></p></div>
+    <div class="field"><label for="ttName">AD</label><input id="ttName" maxlength="80" autocomplete="off" placeholder="Örn. Sunum slaytlarını hazırla" required></div>
+    <div class="field"><label for="ttDue">TARİH (İSTEĞE BAĞLI)</label><input id="ttDue" type="date"><span class="hint">Tarih verirsen bütün üyelerin takviminde görünür.</span></div>
+    <div class="field"><span class="lbl">ZAMAN</span><label class="toggle" for="ttAllDay"><input type="checkbox" id="ttAllDay" checked><span class="fn"><span class="t">Tüm gün</span><span class="sub">Belli bir saati yok.</span></span></label><div class="range" id="ttRange" hidden><input id="ttTime" type="time" aria-label="Başlangıç saati"><span>–</span><input id="ttEnd" type="time" aria-label="Bitiş saati"></div><label class="mini rem" id="ttRemindWrap" hidden>Hatırlat (bütün üyelere)<select class="sel" id="ttRemind"></select></label></div>
+    <div class="field"><label for="ttNote">NOT (İSTEĞE BAĞLI)</label><textarea id="ttNote" maxlength="500" rows="2" placeholder="Ayrıntılar, bağlantılar…"></textarea></div>
+    <div class="row-btns"><button type="button" class="btn danger" id="ttDel" hidden>Sil</button><span class="grow"></span><button type="button" class="btn ghost" data-close>Vazgeç</button><button type="submit" class="btn primary" id="ttSave">Kaydet</button></div>
+  </form>
+</dialog>
+
+<div class="cele" id="cele" hidden><div class="cele-card"><div class="cele-burst" aria-hidden="true"></div><p class="cele-big" id="celeBig"></p><p class="cele-sub" id="celeSub"></p><button class="btn primary" type="button" id="celeOk">Devam</button></div></div>
 
 <dialog id="friendSheet">
   <form class="sheet" id="friendForm" method="dialog">
@@ -873,9 +904,10 @@ function renderDaily(r, cs) {
   } else {
     if (list.length) {
       const doneN = list.filter(t => r.done.includes(t.id)).length;
-      h += `<div class="prog"><div class="bar"><i style="width:${(doneN / list.length) * 100}%"></i></div><div class="pt"><span>Bugünkü ilerleme</span><b>${doneN} / ${list.length}</b></div></div>`;
+      h += `<div class="prog"><div class="bar"><i style="width:${(doneN / list.length) * 100}%"></i></div><div class="pt"><span>${cheer(doneN, list.length)}</span><b>${doneN} / ${list.length}</b></div></div>`;
     }
     h += cardHtml(r, cur, list, cs);
+    h += `<p class="quote"><b>GÜNÜN SÖZÜ</b>${esc(sayingOfDay())}</p>`;
     if (list.length) {
       h += editHead('BUGÜNÜN SIRASI', 'daily') + `<ol class="list">`;
       list.forEach((t, i) => {
@@ -886,7 +918,7 @@ function renderDaily(r, cs) {
         const ts = taskStreak(t.id);
         const sub = [t.dur && (isDone || isNow) ? `<span class="ic">${clockIcon}${t.dur} dk</span>` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', subIcons(t)].filter(Boolean).join('');
         const label = isDone ? `${t.name}: tamamlandı, geri al` : `${t.name}: tamamlandı olarak işaretle`;
-        h += `<li class="row ${cls}"><button class="mark" type="button" data-act="toggle" data-id="${t.id}" aria-label="${esc(label)}">${isDone ? check : isSkip ? '' : i + 1}</button>`
+        h += `<li class="row ${cls}${justDone === t.id ? ' pop' : ''}"><button class="mark" type="button" data-act="toggle" data-id="${t.id}" aria-label="${esc(label)}">${isDone ? check : isSkip ? '' : i + 1}</button>`
           + `<button class="rowname" type="button" data-act="edit" data-id="${t.id}"><span class="t">${esc(t.name)}</span>${sub ? `<span class="sub">${sub}</span>` : ''}</button>`
           + (listEdit === 'daily' ? delCtl(t) : `<span class="crow-r"><span class="meta${late ? ' late' : ''}">${meta}</span>${shareBtn(t)}</span>`) + '</li>';
       });
@@ -900,6 +932,7 @@ function renderDaily(r, cs) {
   }
   if (all.length) h += streakHtml(cs, list);
   $('view-daily').innerHTML = `<div style="display:grid;gap:var(--space-4)">${h}</div>`;
+  justDone = '';
 }
 
 // Dün eksik kaldıysa: düzeltme ve izin günü seçenekleri
@@ -1036,6 +1069,31 @@ function generalHtml() {
   return h;
 }
 
+// ---- teşvik ----
+const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
+const MILESTONES = { 3: 'Üç gün üst üste! Alışkanlık böyle başlar.', 7: 'Tam bir hafta! Seri artık senin.', 14: 'İki hafta oldu. Bu iş oturdu.', 21: '21 gün! Artık rutinin bir parçası.', 30: 'Bir ay boyunca hiç bırakmadın.', 50: '50 gün! Çok az kişi buraya gelir.', 100: '100 gün! Efsane bir seri.', 200: '200 gün. Saygılar.', 365: 'Tam bir yıl! İnanılmaz.' };
+function celebrate(big, sub) {
+  $('celeBig').textContent = big; $('celeSub').textContent = sub;
+  const colors = ['var(--done)', 'var(--streak)', 'var(--timer)', 'var(--accent)'];
+  $('cele').querySelector('.cele-burst').innerHTML = Array.from({ length: 28 }, (_, i) => `<i style="left:${(i * 37) % 100}%;background:${colors[i % 4]};animation-delay:${(i % 7) * .08}s"></i>`).join('');
+  $('cele').hidden = false; buzz([30, 60, 30]);
+  clearTimeout(celebrate.t); celebrate.t = setTimeout(() => { $('cele').hidden = true; }, 4500);
+}
+$('celeOk').addEventListener('click', () => { $('cele').hidden = true; });
+$('cele').addEventListener('click', e => { if (e.target.id === 'cele') $('cele').hidden = true; });
+// Günün sözü: her gün bir tane, sırayla
+const SAYINGS = ['Küçük adımlar, büyük değişimler getirir.', 'Bugün yaptığın, yarınki seni şekillendirir.', 'Mükemmel olmak zorunda değilsin, devam etmen yeter.', 'Bir işi bitirmenin en iyi zamanı şimdi.', 'Motivasyon başlatır, alışkanlık sürdürür.', 'Zor günlerde bile bir adım atmak seriyi yaşatır.', 'Kendine verdiğin sözü tutmak en güzel güvendir.', 'Yavaş ilerlemek, hiç ilerlememekten iyidir.', 'Her tamamlanan iş, bir sonrakini kolaylaştırır.', 'Dün geride kaldı; bugün yeni bir çizgi çek.', 'Başarı her gün tekrarlanan küçük çabaların toplamıdır.', 'İlk işi bitir, gerisi gelir.', 'Planlanan iş, yarı yapılmış iştir.', 'Birlikte yapılan iş daha kolay biter; ekibine haber ver.', 'Bugün bir arkadaşını tebrik et, ikiniz de kazanırsınız.', 'Disiplin, istediğin şeyi en çok istediğin şey için seçmektir.', 'Düzenli olmak, özgür olmanın kısa yoludur.', 'Bir gün mü, birinci gün mü? Seçim senin.', 'Erteleme yarına iş yükler, bitirmek bugüne huzur.', 'Seri bir sayı değil, kendine verdiğin değerdir.', 'Az ama her gün.', 'Yorulduğunda dinlen, ama bırakma.', 'Her sabah yeni bir başlangıç.', 'Bitirdiğin her iş kendine bir alkış.', 'Hedefini küçük parçalara böl, bir tanesini şimdi yap.', 'Rutinin seni taşır, sen sadece başla.', 'Bugünün işi bugün biter, yarın hafif uyanırsın.', 'İstikrar yetenekten güçlüdür.', 'Bir saatlik odak, bir günlük dağınıklıktan değerlidir.', 'Kendinle yarış, dünkü senden bir adım öne geç.', 'Ekipçe planlanan iş yarı yoldadır.'];
+const sayingOfDay = () => { const d = new Date(), start = new Date(d.getFullYear(), 0, 0); return SAYINGS[Math.floor((d - start) / 864e5) % SAYINGS.length]; };
+// İlerleme çubuğunun yanında duruma göre kısa bir cesaret cümlesi
+function cheer(doneN, total) {
+  if (!doneN) return 'İlk işi bitir, gün açılsın';
+  if (doneN === total) return 'Bugün tamam, harikasın';
+  if (total - doneN === 1) return 'Son bir iş kaldı';
+  if (doneN * 2 >= total) return 'Yarıyı geçtin, devam';
+  return 'İyi gidiyorsun';
+}
+let justDone = '';
+
 // ---- eylemler ----
 function markDone(id) {
   const r = todayRec();
@@ -1043,7 +1101,12 @@ function markDone(id) {
   r.skip = r.skip.filter(x => x !== id);
   r.at[id] = nowHM();
   if (S.timer && S.timer.id === id) S.timer = null;
-  if (dayComplete(today())) toast(`Bugün tamam. Seri ${currentStreak()} gün.`);
+  justDone = id; buzz(20);
+  if (dayComplete(today())) {
+    const n = currentStreak();
+    if (MILESTONES[n]) celebrate(`${n} günlük seri!`, MILESTONES[n]);
+    else celebrate('Bugün tamam!', n > 1 ? `Serin ${n} gün oldu. Yarın da aynı sırayla.` : 'Serinin ilk günü. Yarın da gel, ikinci çizgi gelsin.');
+  }
 }
 function onAction(e) {
   const b = e.target.closest('[data-act]'); if (!b || !loaded) return;
@@ -1702,7 +1765,7 @@ $('pokeBox').addEventListener('click', async e => {
 // ---- ekipler ----
 // Başkan ekip kurar, kodunu paylaşır; katılan üyelere uygulama içinden görev verir.
 // Verilen görev üyenin kendi listesine düşer ve seriye sayılır.
-let TEAMS = null, teamErr = '', TEAM = null, TEAM_ROWS = [];
+let TEAMS = null, teamErr = '', TEAM = null, TEAM_ROWS = [], TEAM_YETKI = new Map(), TEAM_TT = null, ttOpenDone = false;
 const TEAM_MSG = {
   katildi: 'Ekibe katıldın.',
   zaten: 'Zaten bu ekiptesin.',
@@ -1711,7 +1774,8 @@ const TEAM_MSG = {
 };
 const TEAM_ERR = {
   ekip_siniri: 'En fazla 10 ekip kurabilirsin.',
-  baskan_degil: 'Bunu yalnızca ekip başkanı yapabilir.',
+  baskan_degil: 'Bunun için ekip başkanı ya da yetkili olmalısın.',
+  silme_yetkisi_yok: 'Bu ortak işi yalnızca ekleyen kişi, başkan ya da yetkililer silebilir.',
   uye_degil: 'Bu kişi artık ekipte değil.',
   ad_bos: 'Görevin adını yaz.',
   ad_kisa: 'Ekip adı en az 2 harf olmalı.',
@@ -1719,11 +1783,14 @@ const TEAM_ERR = {
   baskan_cikamaz: 'Başkan kendini çıkaramaz.',
   ekip_uyesi_degil: 'Bu ekibin üyesi değilsin.'
 };
+// Başkan ya da başkanın yetki verdiği üye görev dağıtabilir
+const canAssign = t => !!t && (t.lider_mi || t.yetkili);
 const teamError = err => { const m = String((err && err.message) || ''); const k = Object.keys(TEAM_ERR).find(x => m.includes(x)); return k ? TEAM_ERR[k] : hataMesaji(err); };
 async function loadTeams() {
   if (!PROFILE) return;
-  const { data, error } = await sb.rpc('ekiplerim');
-  if (error) teamErr = teamError(error); else { TEAMS = data || []; teamErr = ''; }
+  const [{ data, error }, y] = await Promise.all([sb.rpc('ekiplerim'), sb.rpc('ekip_yetkilerim')]);
+  const can = new Set(y.error ? [] : (y.data || []).map(r => r.team_id));
+  if (error) teamErr = teamError(error); else { TEAMS = (data || []).map(t => ({ ...t, yetkili: t.lider_mi || can.has(t.id) })); teamErr = ''; }
   renderFriends();
 }
 function teamsHtml() {
@@ -1736,7 +1803,7 @@ function teamsHtml() {
   }
   h += `<p class="sec">EKİPLERİN</p><ul class="list">` + (TEAMS || []).map(t =>
     `<li><button class="frow fbtn" type="button" data-team="${t.id}"><span class="av" aria-hidden="true">${esc(initials(t.name))}</span>`
-    + `<span class="fn"><span class="t">${esc(t.name)}</span><span class="sub">${t.lider_mi ? 'Ekip başkanısın' : 'Başkan: ' + esc(t.lider_adi)} · ${t.uye_sayisi} kişi</span></span><span class="chev" aria-hidden="true">›</span></button></li>`).join('') + `</ul>`;
+    + `<span class="fn"><span class="t">${esc(t.name)}</span><span class="sub">${t.lider_mi ? 'Ekip başkanısın' : (t.yetkili ? 'Yetkilisin · ' : '') + 'Başkan: ' + esc(t.lider_adi)} · ${t.uye_sayisi} kişi</span></span><span class="chev" aria-hidden="true">›</span></button></li>`).join('') + `</ul>`;
   return h;
 }
 async function teamSubmit(form) {
@@ -1776,7 +1843,7 @@ const assignForm = uid => `<form class="assign" data-assign="${uid}" data-mask="
 async function openTeam(id) {
   TEAM = (TEAMS || []).find(t => t.id === id); if (!TEAM) return;
   $('tmName').textContent = TEAM.name;
-  $('tmSub').textContent = TEAM.lider_mi ? `Ekip başkanısın · ${TEAM.uye_sayisi} kişi` : `Başkan: ${TEAM.lider_adi} · ${TEAM.uye_sayisi} kişi`;
+  $('tmSub').textContent = TEAM.lider_mi ? `Ekip başkanısın · ${TEAM.uye_sayisi} kişi` : `${TEAM.yetkili ? 'Yetkilisin · ' : ''}Başkan: ${TEAM.lider_adi} · ${TEAM.uye_sayisi} kişi`;
   $('tmCodeBox').hidden = !TEAM.lider_mi;
   $('tmCode').textContent = TEAM.code || '';
   $('tmLeave').textContent = TEAM.lider_mi ? 'Ekibi sil' : 'Ekipten ayrıl';
@@ -1787,10 +1854,14 @@ async function openTeam(id) {
 }
 async function loadTeamBody() {
   const team = TEAM;
-  const { data, error } = await sb.rpc('ekip_durumu', { p_team: team.id, p_gun: today() });
+  const [{ data, error }, u, o] = await Promise.all([
+    sb.rpc('ekip_durumu', { p_team: team.id, p_gun: today() }), sb.rpc('ekip_uyeleri', { p_team: team.id }), sb.rpc('ortak_isler', { p_team: team.id })
+  ]);
   if (TEAM !== team) return;
   if (error) { $('tmBody').innerHTML = `<div class="msg err">${esc(teamError(error))}</div>`; return; }
   TEAM_ROWS = data || [];
+  TEAM_YETKI = new Map(u.error ? [] : (u.data || []).map(r => [r.user_id, r.yetkili]));
+  TEAM_TT = o.error ? null : (o.data || []);
   drawTeamBody();
   if (FR === null) { await ensureFriends(); if (TEAM === team) drawTeamBody(); }
 }
@@ -1803,25 +1874,57 @@ function drawTeamBody() {
   }
   const todayBit = 1 << wdIndex(today());
   const isToday = g => g.tur === 'general' || ((g.gunler || 127) & todayBit);
-  $('tmBody').innerHTML = members.map(m => {
+  $('tmBody').innerHTML = teamSummary(members, isToday) + ortakHtml() + `<p class="sec">ÜYELER</p>` + members.map(m => {
     const td = m.tasks.filter(isToday);
     const done = td.filter(g => g.bitti).length;
     const prog = td.length ? `bugün ${done}/${td.length}` : 'bugün ekip görevi yok';
     let h = `<div class="member"><div class="frow"><span class="av" aria-hidden="true">${esc(initials(m.full_name))}</span>`
       + (m.user_id === USER.id
-        ? `<span class="fn"><span class="t">${esc(m.full_name)}${m.lider ? ' <span class="tag">başkan</span>' : ''}</span><span class="sub">${prog} · sen</span></span>`
-        : `<button class="fn mem" type="button" data-member="${m.user_id}" data-name="${esc(m.full_name)}"><span class="t">${esc(m.full_name)}${m.lider ? ' <span class="tag">başkan</span>' : ''}</span><span class="sub">${prog} · ${relLabel(m.user_id)}</span></button>`)
-      + (TEAM.lider_mi && !m.lider ? `<button class="btn ghost sm" type="button" data-kick="${m.user_id}">Çıkar</button>` : '') + `</div>`;
+        ? `<span class="fn"><span class="t">${esc(m.full_name)}${roleTag(m)}</span><span class="sub">${prog} · sen</span></span>`
+        : `<button class="fn mem" type="button" data-member="${m.user_id}" data-name="${esc(m.full_name)}"><span class="t">${esc(m.full_name)}${roleTag(m)}</span><span class="sub">${prog} · ${relLabel(m.user_id)}</span></button>`)
+      + (TEAM.lider_mi && !m.lider ? `<span class="fbtns col"><button class="btn ghost sm" type="button" data-yetki="${m.user_id}" data-on="${TEAM_YETKI.get(m.user_id) ? '' : '1'}">${TEAM_YETKI.get(m.user_id) ? 'Yetkiyi al' : 'Yetki ver'}</button><button class="btn ghost sm" type="button" data-kick="${m.user_id}">Çıkar</button></span>` : '') + `</div>`;
     if (m.tasks.length) {
       h += `<ul class="list tlist">` + m.tasks.map(g => {
         const when = g.tur === 'general' ? (g.son_tarih ? dueLabel(g.son_tarih).text || 'tek seferlik' : 'tek seferlik') : [daysLabel(g.gunler), g.saat ? g.saat.slice(0, 5) + (g.bitis ? '–' + g.bitis.slice(0, 5) : '') : ''].filter(Boolean).join(' · ');
         const st = g.bitti ? '<span class="meta okk">bitti</span>' : isToday(g) ? '<span class="meta">bekliyor</span>' : '<span class="meta">bugün yok</span>';
-        return `<li class="prow"><span class="fn"><span class="t">${esc(g.gorev_adi)}</span><span class="sub">${esc(when)}</span></span><span class="prow-r">${st}${TEAM.lider_mi ? `<button class="x" type="button" data-untask="${g.gorev_id}" aria-label="${esc(g.gorev_adi)} görevini kaldır">×</button>` : ''}</span></li>`;
+        return `<li class="prow"><span class="fn"><span class="t">${esc(g.gorev_adi)}</span><span class="sub">${esc(when)}</span></span><span class="prow-r">${st}${canAssign(TEAM) ? `<button class="x" type="button" data-untask="${g.gorev_id}" aria-label="${esc(g.gorev_adi)} görevini kaldır">×</button>` : ''}</span></li>`;
       }).join('') + `</ul>`;
     }
-    if (TEAM.lider_mi) h += `<button class="link" type="button" data-give="${m.user_id}">+ Görev ver</button><div data-slot="${m.user_id}"></div>`;
+    if (canAssign(TEAM)) h += `<button class="link" type="button" data-give="${m.user_id}">+ Görev ver</button><div data-slot="${m.user_id}"></div>`;
     return h + `</div>`;
   }).join('') + (TEAM.lider_mi ? `<div class="member"><button class="link" type="button" data-addfriends>+ Arkadaşlarını ekibe ekle</button><div data-addslot></div></div>` : '');
+}
+const roleTag = m => m.lider ? ' <span class="tag">başkan</span>' : TEAM_YETKI.get(m.user_id) ? ' <span class="tag">yetkili</span>' : '';
+// Ekibi motive eden özet: bugün ekip görevlerinin ne kadarı bitti, bu hafta en çok ortak iş bitiren kim
+function teamSummary(members, isToday) {
+  let total = 0, done = 0;
+  for (const m of members) for (const g of m.tasks) if (isToday(g)) { total++; if (g.bitti) done++; }
+  const parts = [];
+  if (total) parts.push(done === total ? `Bugün ekip görevlerinin hepsi bitti` : `Bugün ekip görevleri: ${done}/${total}`);
+  if (TEAM_TT) {
+    const open = TEAM_TT.filter(x => !x.done).length;
+    parts.push(open ? `${open} ortak iş açık` : TEAM_TT.length ? 'Ortak işlerin hepsi bitti' : '');
+    const week = Date.now() - 7 * 864e5, cnt = {};
+    for (const x of TEAM_TT) if (x.done && x.bitiren && Date.parse(x.done_at) > week) cnt[x.bitiren] = (cnt[x.bitiren] || 0) + 1;
+    const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+    if (top) parts.push(`Bu haftanın yıldızı: ${esc(top[0])} (${top[1]} ortak iş)`);
+  }
+  const txt = parts.filter(Boolean);
+  if (!txt.length) return '';
+  const pct = total ? Math.round(done / total * 100) : null;
+  return `<div class="tm-sum">${pct !== null ? `<div class="bar"><i style="width:${pct}%"></i></div>` : ''}<span>${txt.join(' · ')}</span></div>`;
+}
+// Ekibin ortak işleri: her üye ekler, düzenler, bitirir
+function ttWhen(x) { return [x.due ? dueLabel(x.due).text : '', x.saat ? x.saat.slice(0, 5) + (x.bitis ? '–' + x.bitis.slice(0, 5) : '') : ''].filter(Boolean).join(' · '); }
+function ortakHtml() {
+  if (!TEAM_TT) return '';
+  const open = TEAM_TT.filter(x => !x.done), closed = TEAM_TT.filter(x => x.done);
+  const row = x => `<li class="crow"><button class="mk${x.done ? ' ok' : ''}" type="button" data-ttdone="${x.id}" aria-label="${esc(x.name)}: ${x.done ? 'geri al' : 'bitti olarak işaretle'}">${x.done ? check : ''}</button>`
+    + `<button class="fn cal-open" type="button" data-ttedit="${x.id}"><span class="t">${esc(x.name)}</span><span class="sub">${[ttWhen(x), x.done ? `${esc(x.bitiren || 'biri')} bitirdi` : `${esc(x.ekleyen || 'biri')} ekledi`].filter(Boolean).join(' · ')}</span></button><span class="meta"></span></li>`;
+  let h = `<div class="sec-row"><p class="sec">ORTAK İŞLER</p><button class="link" type="button" data-ttnew>+ Ortak iş ekle</button></div>`;
+  h += open.length ? `<ul class="list">${open.map(row).join('')}</ul>` : `<p class="hint">${closed.length ? 'Açık ortak iş yok. Eline sağlık ekip!' : 'Ekipçe yapılacak işleri buraya ekleyin. Her üye ekleyebilir, bitirebilir; kimin bitirdiği görünür.'}</p>`;
+  if (closed.length) h += `<details id="ttDone"${ttOpenDone ? ' open' : ''}><summary>BİTENLER (${closed.length})</summary><ul class="list">${closed.map(row).join('')}</ul></details>`;
+  return h;
 }
 // Ekip üyesiyle arkadaşlık durumu; dokununca arkadaş eklenir ya da arkadaşın penceresi açılır
 function relLabel(id) {
@@ -1876,6 +1979,22 @@ $('newTeamForm').addEventListener('submit', async e => {
 $('tmBody').addEventListener('click', async e => {
   const mem = e.target.closest('[data-member]');
   if (mem) { memberTap(mem.dataset.member, mem.dataset.name); return; }
+  if (e.target.closest('[data-ttnew]')) { openTT(null); return; }
+  const tte = e.target.closest('[data-ttedit]');
+  if (tte) { openTT(tte.dataset.ttedit); return; }
+  const ttd = e.target.closest('[data-ttdone]');
+  if (ttd) { toggleTT(ttd.dataset.ttdone, ttd); return; }
+  const yt = e.target.closest('[data-yetki]');
+  if (yt) {
+    const on = yt.dataset.on === '1', name = (TEAM_ROWS.find(r => r.user_id === yt.dataset.yetki) || {}).full_name || 'Üye';
+    if (on && !await confirmBox(`${name} yetkili olsun mu?`, 'Yetkili üyeler de ekip üyelerine görev verebilir, verilen görevleri kaldırabilir ve ortak işleri silebilir.', 'Yetki ver', false)) return;
+    yt.disabled = true;
+    const { error } = await sb.rpc('yetki_ver', { p_team: TEAM.id, p_uye: yt.dataset.yetki, p_yetkili: on });
+    if (error) { yt.disabled = false; toast(teamError(error)); return; }
+    toast(on ? `${name} artık yetkili.` : `${name} kişisinin yetkisi alındı.`);
+    loadTeamBody();
+    return;
+  }
   if (e.target.closest('[data-addfriends]')) {
     const slot = $('tmBody').querySelector('[data-addslot]');
     if (slot.innerHTML) { slot.innerHTML = ''; return; }
@@ -1939,6 +2058,7 @@ $('tmBody').addEventListener('click', async e => {
     toast('Üye ekipten çıkarıldı.'); TEAM.uye_sayisi--; loadTeamBody(); loadTeams();
   }
 });
+$('tmBody').addEventListener('toggle', e => { if (e.target.id === 'ttDone') ttOpenDone = e.target.open; }, true);
 $('tmBody').addEventListener('submit', async e => {
   const f = e.target.closest('form.assign'); if (!f) return;
   e.preventDefault();
@@ -1972,6 +2092,56 @@ $('tmLeave').addEventListener('click', async () => {
   $('teamSheet').close(); TEAM = null;
   loadTeams(); reloadFromServer();
 });
+
+// ---- ortak iş penceresi ----
+let ttEdit = null;
+function openTT(id) {
+  const x = id ? (TEAM_TT || []).find(y => y.id === id) : null;
+  if (id && !x) return;
+  ttEdit = x;
+  $('ttTitle').textContent = x ? 'Ortak işi düzenle' : 'Yeni ortak iş';
+  $('ttWho').textContent = x ? [`${x.ekleyen || 'Biri'} ekledi`, x.done ? `${x.bitiren || 'biri'} bitirdi` : ''].filter(Boolean).join(' · ') : `${TEAM.name} ekibinin bütün üyeleri görür ve bitirebilir.`;
+  $('ttName').value = x ? x.name : ''; $('ttDue').value = x && x.due ? x.due : '';
+  $('ttTime').value = x && x.saat ? x.saat.slice(0, 5) : ''; $('ttEnd').value = x && x.bitis ? x.bitis.slice(0, 5) : '';
+  $('ttAllDay').checked = !(x && x.saat); $('ttRange').hidden = $('ttAllDay').checked;
+  $('ttRemind').innerHTML = remindOptions(x ? x.remind_before : 0); $('ttRemindWrap').hidden = $('ttAllDay').checked;
+  $('ttNote').value = x && x.note ? x.note : '';
+  $('ttDel').hidden = !x || !(x.ekleyen_id === USER.id || canAssign(TEAM));
+  $('ttSheet').showModal();
+  if (!x) $('ttName').focus();
+}
+$('ttAllDay').addEventListener('change', () => { const on = $('ttAllDay').checked; $('ttRange').hidden = $('ttRemindWrap').hidden = on; if (!on) $('ttTime').focus(); });
+$('ttForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('ttName').value.trim(); if (!name) { toast('İşin adını yaz.'); $('ttName').focus(); return; }
+  const all = $('ttAllDay').checked, st = all ? '' : $('ttTime').value, en = all ? '' : $('ttEnd').value;
+  const re = rangeError(st, en); if (re) { toast(re); return; }
+  if (st && !$('ttDue').value) { toast('Saat verdiysen tarihini de seç.'); return; }
+  $('ttSave').disabled = true;
+  const { error } = await sb.rpc('ortak_is_kaydet', { p_id: ttEdit ? ttEdit.id : null, p_team: TEAM.id, p_ad: name, p_tarih: $('ttDue').value || null, p_saat: st || null, p_bitis: st && en ? en : null, p_not: $('ttNote').value.trim() || null, p_hatirlat: st ? remindParse($('ttRemind').value) : 0 });
+  $('ttSave').disabled = false;
+  if (error) { toast(teamError(error)); return; }
+  $('ttSheet').close();
+  toast(ttEdit ? 'Ortak iş güncellendi.' : `"${name}" ekibe eklendi.`);
+  loadTeamBody(); loadShares();
+});
+$('ttDel').addEventListener('click', async () => {
+  if (!ttEdit || !await confirmBox(`"${ttEdit.name}" silinsin mi?`, 'Ortak iş bütün ekipten kalkar. Bu işlem geri alınamaz.')) return;
+  const { error } = await sb.rpc('ortak_is_sil', { p_id: ttEdit.id });
+  if (error) { toast(teamError(error)); return; }
+  $('ttSheet').close(); toast('Ortak iş silindi.'); loadTeamBody(); loadShares();
+});
+async function toggleTT(id, btn) {
+  const x = (TEAM_TT || []).find(y => y.id === id) || PLANS.find(p => p.kind === 'ortak' && p.task_id === id);
+  if (!x) return;
+  if (btn) btn.disabled = true;
+  const bitti = !x.done;
+  const { error } = await sb.rpc('ortak_is_bitir', { p_id: id, p_bitti: bitti });
+  if (error) { if (btn) btn.disabled = false; toast(teamError(error)); return; }
+  if (bitti) { buzz(25); toast(`"${x.name}" bitti. Eline sağlık!`); }
+  if (TEAM && $('teamSheet').open) loadTeamBody();
+  loadShares();
+}
 
 // ---- takvim ----
 // Ay görünümü: her günün durumu; bir güne dokununca o günün işleri, gelecekteki günlere tek seferlik iş eklenebilir.
@@ -2016,7 +2186,7 @@ const fromMin = n => `${pad(Math.floor(n / 60) % 24)}:${pad(n % 60)}`;
 function weekItems(k) {
   const t = today();
   return dayItems(k).map(it => ({ name: it.t.name, time: it.t.time, end: it.t.end, dur: it.t.dur, id: it.t.id, cls: k <= t ? (it.done ? 'ok' : k < t ? 'no' : '') : '' }))
-    .concat(plansOn(k).map(p => ({ name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', cls: 'team', owner: p.owner_name })));
+    .concat(plansOn(k).map(p => ({ name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', cls: p.done ? 'ok' : 'team', owner: p.kind === 'ortak' ? p.team_name : p.owner_name })));
 }
 // Çakışan bloklar yan yana dizilir
 function layoutBlocks(list) {
@@ -2089,7 +2259,7 @@ function monthHtml() {
     const k = `${y}-${pad(m)}-${pad(d)}`, s = calState(k);
     if (k <= t && (s === 'full' || s === 'part' || s === 'miss')) { counted++; if (s === 'full') full++; }
     if (s === 'frozen') frozen++;
-    const due = general().some(g => g.due === k && !g.done), plan = plansOn(k).some(p => p.type === 'general'); // tekrarlı ekip planları her güne nokta koymasın
+    const due = general().some(g => g.due === k && !g.done), plan = plansOn(k).some(p => p.type === 'general' && !p.done); // tekrarlı ekip planları her güne nokta koymasın
     cells += `<button type="button" class="cd ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}" aria-label="${d} ${MONTHS[m - 1]}${CAL_NAMES[s] ? ': ' + CAL_NAMES[s] : ''}${due ? ', son tarihli iş var' : ''}${plan ? ', ekip planı var' : ''}">${d}<span class="dots">${due ? '<i class="dot"></i>' : ''}${plan ? '<i class="dot team"></i>' : ''}</span></button>`;
   }
   const stats = counted ? `Bu ay ${full}/${counted} gün tamam${frozen ? ` · ${frozen} izin günü` : ''}` : 'Bu ay henüz sayılan gün yok';
@@ -2120,8 +2290,9 @@ function calDayHtml(k) {
   }
   const plans = plansOn(k);
   if (plans.length) {
-    h += `<p class="sec">PAYLAŞILAN PLANLAR</p><ul class="list">` + plans.map(p =>
-      `<li class="crow"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col">${HAS_REMIND && p.saat && PLAN_REM.has(p.task_id) ? `<select class="plan-rem" data-planrem="${p.task_id}" aria-label="${esc(p.name)} için hatırlatma">${remindOptions(PLAN_REM.get(p.task_id))}</select>` : ''}<button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && (TEAMS || []).some(x => x.id === p.team_id && x.lider_mi) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
+    h += `<p class="sec">PAYLAŞILAN PLANLAR</p><ul class="list">` + plans.map(p => p.kind === 'ortak'
+      ? `<li class="crow"><button class="mk${p.done ? ' ok' : ' team'}" type="button" data-ttcal="${p.task_id}" aria-label="${esc(p.name)}: ${p.done ? 'geri al' : 'bitti olarak işaretle'}">${p.done ? check : ''}</button><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : ' · tüm gün'}</span></span><span class="meta">${p.done ? 'bitti' : ''}</span></li>`
+      : `<li class="crow"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col">${HAS_REMIND && p.saat && PLAN_REM.has(p.task_id) ? `<select class="plan-rem" data-planrem="${p.task_id}" aria-label="${esc(p.name)} için hatırlatma">${remindOptions(PLAN_REM.get(p.task_id))}</select>` : ''}<button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && canAssign((TEAMS || []).find(x => x.id === p.team_id)) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
   }
   if (!dailyTasks.length && !dueTasks.length && !plans.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
   if (k === shift(t, -1) && s !== 'full' && s !== 'rest' && s !== 'none') h += `<button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`;
@@ -2154,6 +2325,8 @@ $('view-calendar').addEventListener('click', e => {
     openAdd('general', k, fromMin(Math.min(m, 23 * 60)), fromMin(Math.min(m + 60, 23 * 60 + 59)));
     return;
   }
+  const tc = e.target.closest('[data-ttcal]');
+  if (tc) { toggleTT(tc.dataset.ttcal, tc); return; }
   const gp = e.target.closest('[data-giveplan]');
   if (gp) {
     const pl = PLANS.find(x => x.task_id === gp.dataset.giveplan);
@@ -2188,13 +2361,15 @@ let SHARES = new Map(), FSHARES = new Map(), PLANS = [], PLAN_REM = new Map();
 const isShared = t => !!((SHARES.get(t.id) || new Set()).size || (FSHARES.get(t.id) || new Set()).size);
 const toMap = (rows, key) => { const m = new Map(); for (const r of rows || []) { if (!m.has(r.task_id)) m.set(r.task_id, new Set()); m.get(r.task_id).add(r[key]); } return m; };
 async function loadShares() {
-  const [s, p, fs, fp, pr] = await Promise.all([sb.rpc('paylasimlarim'), sb.rpc('ekip_planlari'), sb.rpc('arkadas_paylasimlarim'), sb.rpc('ortak_planlar'), HAS_REMIND ? sb.rpc('plan_hatirlatmalarim') : { error: true }]);
+  const [s, p, fs, fp, pr, oi] = await Promise.all([sb.rpc('paylasimlarim'), sb.rpc('ekip_planlari'), sb.rpc('arkadas_paylasimlarim'), sb.rpc('ortak_planlar'), HAS_REMIND ? sb.rpc('plan_hatirlatmalarim') : { error: true }, sb.rpc('ortak_isler', {})]);
   if (!pr.error) PLAN_REM = new Map((pr.data || []).map(r => [r.task_id, r.dk]));
   if (!s.error) SHARES = toMap(s.data, 'team_id');
   if (!fs.error) FSHARES = toMap(fs.data, 'friend_id');
   const team = p.error ? PLANS.filter(x => x.kind === 'team') : (p.data || []).map(x => ({ ...x, kind: 'team' }));
   const friend = fp.error ? PLANS.filter(x => x.kind === 'friend') : (fp.data || []).map(x => ({ ...x, kind: 'friend', benim: false }));
-  PLANS = team.concat(friend);
+  // Ekiplerin tarihli ortak işleri de takvimde görünür
+  const ortak = oi.error ? PLANS.filter(x => x.kind === 'ortak') : (oi.data || []).filter(x => x.due).map(x => ({ kind: 'ortak', task_id: x.id, name: x.name, type: 'general', due: x.due, saat: x.saat, bitis: x.bitis, team_id: x.team_id, team_name: x.team_name, owner_name: x.ekleyen || '', done: x.done, benim: false }));
+  PLANS = team.concat(friend, ortak);
   if (TEAMS === null && team.length) loadTeams();
   if (loaded) render();
 }
@@ -2203,7 +2378,7 @@ function plansOn(k) {
   return PLANS.filter(p => !p.benim && (p.type === 'general' ? p.due === k : k >= today() && ((p.days || 127) & (1 << wdIndex(k)))));
 }
 const planTime = p => p.saat ? p.saat.slice(0, 5) + (p.bitis ? '–' + p.bitis.slice(0, 5) : '') : '';
-const planFrom = p => p.kind === 'friend' ? `${p.owner_name} seninle paylaştı` : `${p.owner_name} · ${p.team_name}`;
+const planFrom = p => p.kind === 'friend' ? `${p.owner_name} seninle paylaştı` : p.kind === 'ortak' ? `${p.team_name} · ortak iş` : `${p.owner_name} · ${p.team_name}`;
 // Ekip ve arkadaş seçme kutuları; görev penceresinde ve ayrı Paylaş penceresinde kullanılır
 async function fillShareBox(t, box = $('fShare'), stillOpen = () => editId === t.id) {
   if (!TEAMS || FR === null) { box.innerHTML = '<p class="hint">Ekiplerin ve arkadaşların yükleniyor…</p>'; await Promise.all([TEAMS ? null : loadTeams(), ensureFriends()]); }
@@ -2290,8 +2465,8 @@ function copyPlan(id, k) {
 let GIVE = null;
 async function openGive(item, teamId) {
   if (!TEAMS) await loadTeams();
-  const led = (TEAMS || []).filter(t => t.lider_mi);
-  if (!led.length) { toast('Görev vermek için bir ekibin başkanı olmalısın. Arkadaşlar → Ekipler bölümünden ekip kurabilirsin.'); return; }
+  const led = (TEAMS || []).filter(canAssign);
+  if (!led.length) { toast('Görev vermek için bir ekibin başkanı ya da yetkilisi olmalısın. Arkadaşlar → Ekipler bölümünden ekip kurabilirsin.'); return; }
   GIVE = item;
   const when = item.type === 'general'
     ? [item.due ? dueLabel(item.due).text || item.due : '', timeLabel(item) || 'tüm gün'].filter(Boolean).join(' · ')

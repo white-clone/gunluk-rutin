@@ -49,8 +49,23 @@ Yapılan değişiklikler:
 - SQL çalıştırılmadan uygulama eskisi gibi çalışır; Hatırlat seçimi görünmez.
 - Yerel Postgres 16'da bütün SQL dosyaları sırayla çalıştırıldı, hatırlatma listesi örnek verilerle doğrulandı.
 
+## 2026-10-06 — Ekip ortak işleri, yetkili üyeler, teşvik edici içerik
+- Ortak işler (ekip penceresi): her üye ekler, düzenler, bitirir. "X ekledi" / "Y bitirdi" görünür.
+  Tarih, saat aralığı, hatırlatma (bütün üyelere), not. Silme: ekleyen, başkan ya da yetkili.
+  Tarihli ortak işler bütün üyelerin takviminde görünür ve oradan da bitirilebilir.
+- Yetkili üye: başkan "Yetki ver / Yetkiyi al" ile atar. Yetkili, üyelere bireysel görev verir, görev kaldırır.
+  Üye çıkarma, ekip silme ve yetki verme yalnızca başkanda.
+- Ekip özeti: bugünkü ekip görevleri çubuğu, açık ortak iş sayısı, "Bu haftanın yıldızı" (en çok ortak iş bitiren).
+- Teşvik: Bitti'de titreşim ve işaret animasyonu; gün bitince kutlama ekranı (konfeti);
+  3, 7, 14, 21, 30, 50, 100, 200, 365 günlük seride özel mesaj; ilerleme çubuğunda duruma göre cesaret cümlesi;
+  Günlük ekranında "Günün sözü" (31 söz, her gün biri).
+- Veritabanı: `supabase/13-ekip-ortak-isler.sql` (team_members.yetkili, team_tasks, yetki_ver, ekip_uyeleri,
+  ekip_yetkilerim, ortak_isler, ortak_is_kaydet/bitir/sil, gorev_ver ve ekip_gorev_sil yetkiliye açıldı,
+  hatirlatma_listesi'ne ortak işler eklendi). Yerel Postgres'te izin kuralları ve hatırlatmalar denendi.
+- SQL çalıştırılmadan ortak işler bölümü ve yetki düğmeleri görünmez, gerisi çalışır.
+
 ## Sıradaki adımlar
-- 11 ve 12 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
+- 11, 12 ve 13 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
 - Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
 - Ekip müsaitlik görünümü (haftalık çizelgede üyelerin dolu saatleri).
 - Kutlama ve titreşim.
