@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Giriş · Günlük Rutin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Onest:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="tema.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#f3eae0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16130f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rutin">
+<style>
+  .wrap{max-width:400px;margin:0 auto;padding-block:clamp(24px,8vh,72px) var(--space-8);display:grid;gap:var(--space-6)}
+  .intro{display:grid;gap:var(--space-3)}
+  .intro p{margin:0;color:var(--ink-muted)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-4);display:grid;gap:var(--space-4)}
+  .seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:var(--radius-pill);padding:4px}
+  .seg button{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;font-weight:600;color:var(--ink-muted)}
+  .seg button[aria-selected="true"]{background:var(--raised);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+  form{display:grid;gap:var(--space-4)}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)}
+  h2{margin:0;font:600 17px/24px var(--font-sans)}
+  .muted{margin:0;color:var(--ink-muted);font-size:14px;line-height:20px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="ayar.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <div class="intro">
+    <div class="brand">
+      <span class="mark"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3" width="3" height="14" rx="1.5"/><rect x="8.5" y="3" width="3" height="14" rx="1.5"/><rect x="15" y="3" width="3" height="14" rx="1.5"/></svg></span>
+      <b>Günlük Rutin</b>
+    </div>
+    <p>Her gün yaptığın işleri sırayla bitir, serini koru.</p>
+  </div>
+
+  <div class="card">
+    <div class="seg" role="tablist" id="tabs">
+      <button type="button" role="tab" id="tab-login" data-view="login">Giriş yap</button>
+      <button type="button" role="tab" id="tab-signup" data-view="signup">Kayıt ol</button>
+    </div>
+
+    <form id="f-login" novalidate>
+      <div class="field"><label for="lId">E-POSTA YA DA AD SOYAD</label><input id="lId" autocomplete="username" required></div>
+      <div class="field"><label for="lPw">ŞİFRE</label><div class="pw"><input id="lPw" type="password" autocomplete="current-password" required><button type="button" data-show="lPw">Göster</button></div></div>
+      <div class="msg" id="m-login" role="alert" hidden></div>
+      <button class="btn primary block" type="submit" data-label="Giriş yap">Giriş yap</button>
+      <div class="row"><button class="link" type="button" data-view="forgot">Şifremi unuttum</button></div>
+    </form>
+
+    <form id="f-signup" novalidate hidden>
+      <div class="field"><label for="sName">AD SOYAD</label><input id="sName" autocomplete="name" maxlength="80" required></div>
+      <div class="field"><label for="sMail">E-POSTA</label><input id="sMail" type="email" autocomplete="email" inputmode="email" required></div>
+      <div class="field"><label for="sPw">ŞİFRE</label><div class="pw"><input id="sPw" type="password" autocomplete="new-password" minlength="8" required><button type="button" data-show="sPw">Göster</button></div><span class="hint">En az 8 karakter.</span></div>
+      <div class="field"><label for="sPw2">ŞİFRE TEKRAR</label><input id="sPw2" type="password" autocomplete="new-password" required></div>
+      <div class="msg" id="m-signup" role="alert" hidden></div>
+      <button class="btn primary block" type="submit" data-label="Kayıt ol">Kayıt ol</button>
+    </form>
+
+    <form id="f-forgot" novalidate hidden>
+      <h2>Şifreni sıfırla</h2>
+      <p class="muted">Hesabının e-posta adresini yaz. Yeni şifre belirlemen için bir bağlantı göndereceğiz.</p>
+      <div class="field"><label for="fMail">E-POSTA</label><input id="fMail" type="email" autocomplete="email" inputmode="email" required></div>
+      <div class="msg" id="m-forgot" role="alert" hidden></div>
+      <button class="btn primary block" type="submit" data-label="Sıfırlama bağlantısı gönder">Sıfırlama bağlantısı gönder</button>
+      <div class="row"><button class="link" type="button" data-view="login">Girişe dön</button></div>
+    </form>
+  </div>
+</main>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const HASH = { login: 'giris', signup: 'kayit', forgot: 'unuttum' };
+const appUrl = page => new URL(page, location.href).href;
+
+sb.auth.getSession().then(({ data }) => { if (data.session) location.replace('index.html'); });
+
+function show(view) {
+  for (const v of Object.keys(HASH)) $('f-' + v).hidden = v !== view;
+  $('tabs').hidden = view === 'forgot';
+  $('tab-login').setAttribute('aria-selected', String(view === 'login'));
+  $('tab-signup').setAttribute('aria-selected', String(view === 'signup'));
+  for (const v of Object.keys(HASH)) msg(v, '');
+  history.replaceState(null, '', '#' + HASH[view]);
+  const first = $('f-' + view).querySelector('input');
+  if (first && matchMedia('(pointer:fine)').matches) first.focus();
+}
+function msg(view, text, kind = 'err') {
+  const el = $('m-' + view);
+  el.textContent = text; el.className = 'msg ' + kind; el.hidden = !text;
+}
+function busy(form, on, label) {
+  const b = form.querySelector('button[type=submit]');
+  b.disabled = on; b.textContent = on ? label : b.dataset.label;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-view]');
+  if (b) show(b.dataset.view);
+});
+const initial = Object.keys(HASH).find(v => '#' + HASH[v] === location.hash) || 'login';
+show(initial);
+
+$('f-login').addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = $('lId').value.trim(), pw = $('lPw').value;
+  if (!id || !pw) return msg('login', 'E-posta ya da ad soyad ile şifreni yaz.');
+  busy(e.target, true, 'Giriş yapılıyor…');
+  try {
+    let email = id;
+    if (!id.includes('@')) {
+      const { data, error } = await sb.rpc('giris_eposta', { p_ad: id, p_sifre: pw });
+      if (error) throw error;
+      if (!data) { msg('login', 'Ad soyad ya da şifre hatalı.'); return; }
+      email = data;
+    }
+    const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+    if (error) throw error;
+    location.replace('index.html');
+  } catch (err) {
+    msg('login', hataMesaji(err));
+  } finally {
+    busy(e.target, false);
+  }
+});
+
+$('f-signup').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('sName').value.trim().replace(/\s+/g, ' ');
+  const email = $('sMail').value.trim();
+  const pw = $('sPw').value, pw2 = $('sPw2').value;
+  if (name.length < 2) return msg('signup', 'Ad soyadını yaz.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg('signup', 'Geçerli bir e-posta adresi gir.');
+  if (pw.length < 8) return msg('signup', 'Şifre en az 8 karakter olmalı.');
+  if (pw !== pw2) return msg('signup', 'Şifreler aynı değil.');
+  busy(e.target, true, 'Kaydediliyor…');
+  try {
+    const { data, error } = await sb.auth.signUp({
+      email, password: pw,
+      options: { data: { full_name: name }, emailRedirectTo: appUrl('index.html') }
+    });
+    if (error) throw error;
+    if (data.session) { location.replace('index.html'); return; }
+    msg('signup', 'Kaydın alındı. E-postana gelen "Hesabımı doğrula" düğmesine bastıktan sonra giriş yapabilirsin. Gelmediyse gereksiz klasörüne bak.', 'ok');
+  } catch (err) {
+    msg('signup', hataMesaji(err));
+  } finally {
+    busy(e.target, false);
+  }
+});
+
+$('f-forgot').addEventListener('submit', async e => {
+  e.preventDefault();
+  const email = $('fMail').value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return msg('forgot', 'Geçerli bir e-posta adresi gir.');
+  busy(e.target, true, 'Gönderiliyor…');
+  try {
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: appUrl('sifre.html') });
+    if (error) throw error;
+    msg('forgot', 'Bu e-posta kayıtlıysa sıfırlama bağlantısı gönderildi. Gelen kutunu ve gereksiz klasörünü kontrol et.', 'ok');
+  } catch (err) {
+    msg('forgot', hataMesaji(err));
+  } finally {
+    busy(e.target, false);
+  }
+});
+})();
+</script>
+</body>
+</html>

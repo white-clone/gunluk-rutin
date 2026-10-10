@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Yönetici · Günlük Rutin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Onest:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="tema.css">
+<style>
+  .wrap{max-width:720px;margin:0 auto;padding-block:var(--space-6) var(--space-8);display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-4)}
+  .hd{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+  h1{margin:0;font:600 20px/26px var(--font-display)}
+  .eyebrow{margin:0;font:600 12px/16px var(--font-sans);letter-spacing:.06em;color:var(--ink-muted)}
+  .seg{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface-2);border-radius:var(--radius-pill);padding:4px;max-width:520px}
+  .seg .n{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--streak);color:#fff;font:600 11px/1 var(--font-sans);vertical-align:1px}
+  .sec-h{margin:var(--space-2) 0 0;font:600 15px/22px var(--font-sans)}
+  .sec-h small{font-weight:400;color:var(--ink-muted);margin-left:6px}
+  /* mesajlar */
+  .msgs{display:grid;gap:var(--space-2)}
+  .m{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);display:grid;gap:6px}
+  .m.unread{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+  .m-top{display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;font-size:13px;color:var(--ink-muted)}
+  .m-top b{color:var(--ink);font-size:14px}
+  .kind{font:600 11px/18px var(--font-sans);padding:0 8px;border-radius:var(--radius-pill);background:var(--surface-2);color:var(--ink)}
+  .kind.hata{background:var(--streak-soft);color:var(--streak)}
+  .kind.oneri{background:var(--done-soft);color:var(--done)}
+  .m p{margin:0;font-size:15px;line-height:22px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .m .info{font-size:12px;color:var(--ink-muted)}
+  .m-acts{display:flex;justify-content:flex-end}
+  .linkbtn{border:0;background:none;padding:4px 0;font-weight:600;color:var(--accent);cursor:pointer}
+  .filters{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{border:0;background:transparent;border-radius:var(--radius-pill);padding:10px 0;font-weight:600;color:var(--ink-muted)}
+  .seg button[aria-selected="true"]{background:var(--raised);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+  .tools{display:flex;gap:var(--space-2);flex-wrap:wrap}
+  .search{flex:1 1 200px;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-pill);padding:10px 16px;min-width:0}
+  .search:focus{outline:none;border-color:var(--accent)}
+  .stats{display:flex;gap:var(--space-6);flex-wrap:wrap;font-size:14px;color:var(--ink-muted)}
+  .stats b{font:500 15px/22px var(--font-mono);color:var(--ink);margin-right:4px}
+  .table-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px;line-height:20px}
+  th{text-align:left;font:600 12px/16px var(--font-sans);letter-spacing:.06em;color:var(--ink-muted);padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  td.name{font-weight:600;white-space:normal;min-width:120px}
+  td.nick{white-space:normal;min-width:100px;color:var(--accent);font-weight:600}
+  td .abs{display:block;font-size:12px;line-height:16px;color:var(--ink-muted)}
+  .arrow{color:var(--ink-muted)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--done);margin-right:6px;vertical-align:1px}
+  .empty{margin:0;padding:var(--space-6) var(--space-4);color:var(--ink-muted)}
+  /* özellikler */
+  .period{display:flex;gap:6px}
+  .period button{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-pill);padding:8px 14px;font-weight:600;color:var(--ink-muted);min-height:40px}
+  .period button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-3)}
+  .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);display:grid;gap:2px}
+  .tile span{font:600 12px/16px var(--font-sans);letter-spacing:.06em;color:var(--ink-muted)}
+  .tile b{font:600 22px/28px var(--font-display);color:var(--ink);overflow-wrap:anywhere}
+  .tile small{font-size:13px;color:var(--ink-muted)}
+  .chart{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-4);display:grid;gap:var(--space-2)}
+  .chart h2{margin:0;font:600 15px/22px var(--font-sans)}
+  .bars{position:relative;display:flex;align-items:flex-end;gap:2px;height:140px;border-bottom:1px solid var(--line)}
+  .bars .b{flex:1;min-width:2px;height:100%;display:flex;align-items:flex-end;cursor:default;position:relative}
+  .bars .b i{display:block;width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
+  .bars .b.zero i{background:var(--surface-2)}
+  .bars .b:hover i,.bars .b:focus i{background:var(--ink)}
+  .axis{display:flex;justify-content:space-between;font:500 11px/16px var(--font-mono);color:var(--ink-muted)}
+  .tip{position:absolute;bottom:calc(100% + 6px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:var(--radius-sm);font-size:12px;line-height:16px;white-space:nowrap;pointer-events:none;z-index:2}
+  .barcell{min-width:120px}
+  .barcell i{display:block;height:8px;border-radius:0 4px 4px 0;background:var(--accent);min-width:2px}
+  .trend{font-weight:600}
+  .trend.up{color:var(--done)}
+  .trend.down{color:var(--streak)}
+  td .feat{font-weight:600}
+  td .cat{display:block;font-size:12px;line-height:16px;color:var(--ink-muted)}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="ayar.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header class="hd">
+    <div><p class="eyebrow">YÖNETİCİ</p><h1>Günlük Rutin</h1></div>
+    <a class="btn secondary" href="index.html">Uygulamaya dön</a>
+  </header>
+  <div class="msg err" id="err" role="alert" hidden></div>
+  <section id="content" hidden>
+    <div style="display:grid;gap:var(--space-4)">
+      <div class="seg" role="tablist">
+        <button type="button" role="tab" id="tab-users" data-tab="users">Kullanıcılar</button>
+        <button type="button" role="tab" id="tab-nicks" data-tab="nicks">Lakaplar</button>
+        <button type="button" role="tab" id="tab-feats" data-tab="feats">Özellikler</button>
+        <button type="button" role="tab" id="tab-msgs" data-tab="msgs">Mesajlar<span class="n" id="msgCount" hidden></span></button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="tools" id="toolsRow">
+        <input class="search" id="q" type="search" placeholder="İsimle ara" aria-label="İsimle ara">
+        <button class="btn secondary" type="button" id="refresh">Yenile</button>
+      </div>
+      <div id="featsWrap" hidden style="display:grid;gap:var(--space-4)">
+        <div class="period" role="group" aria-label="Dönem"><button type="button" data-gun="7">Son 7 gün</button><button type="button" data-gun="30">Son 30 gün</button><button type="button" data-gun="90">Son 90 gün</button></div>
+        <div class="tiles" id="featTiles"></div>
+        <div class="chart"><h2>Günlük aktif kişi</h2><div class="bars" id="dayBars" role="img" aria-label="Günlük aktif kişi grafiği"></div><div class="axis" id="dayAxis"></div></div>
+        <h2 class="sec-h">Kişi başına kullanım<small>açılış: uygulamayı açma sayısı · dakika: uygulama ekrandayken geçen süre</small></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Ad soyad</th><th>Bugün</th><th>Günlük ortalama</th><th>Aktif gün</th><th>Son kullanım</th></tr></thead>
+            <tbody id="peopleRows"></tbody>
+          </table>
+          <p class="empty" id="peopleNone" hidden></p>
+        </div>
+        <h2 class="sec-h">Özellikler</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Özellik</th><th>Kullanım</th><th>Kişi</th><th>Önceki döneme göre</th><th>Son kullanım</th><th></th></tr></thead>
+            <tbody id="featRows"></tbody>
+          </table>
+          <p class="empty" id="featsNone" hidden></p>
+        </div>
+      </div>
+      <div id="msgsWrap" hidden style="display:grid;gap:var(--space-3)">
+        <div class="period filters" role="group" aria-label="Mesaj türü"><button type="button" data-kind="">Hepsi</button><button type="button" data-kind="hata">Hata</button><button type="button" data-kind="oneri">Öneri</button><button type="button" data-kind="diger">Diğer</button></div>
+        <div class="msgs" id="msgList"></div>
+        <p class="empty" id="msgsNone" hidden></p>
+      </div>
+      <div class="table-wrap" id="usersWrap">
+        <table>
+          <thead><tr><th>Ad soyad</th><th>Son giriş</th><th>Son görülme</th><th>Kayıt</th></tr></thead>
+          <tbody id="userRows"></tbody>
+        </table>
+        <p class="empty" id="usersNone" hidden>Aramana uyan kullanıcı yok.</p>
+      </div>
+      <div class="table-wrap" id="nicksWrap" hidden>
+        <table>
+          <thead><tr><th>Lakabı takan</th><th></th><th>Kime</th><th>Lakap</th><th>Tarih</th></tr></thead>
+          <tbody id="nickRows"></tbody>
+        </table>
+        <p class="empty" id="nicksNone" hidden></p>
+      </div>
+    </div>
+  </section>
+  <p class="eyebrow" id="loading">YÜKLENİYOR…</p>
+</main>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rtf = new Intl.RelativeTimeFormat('tr', { numeric: 'auto' });
+const absFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+function rel(iso) {
+  if (!iso) return '';
+  const s = (Date.parse(iso) - Date.now()) / 1000;
+  const steps = [[60, 'second'], [3600, 'minute', 60], [86400, 'hour', 3600], [604800, 'day', 86400], [2629800, 'week', 604800], [31557600, 'month', 2629800], [Infinity, 'year', 31557600]];
+  for (const [lim, unit, div = 1] of steps) if (Math.abs(s) < lim) return Math.abs(s) < 45 && unit === 'second' ? 'az önce' : rtf.format(Math.round(s / div), unit);
+}
+const cell = iso => iso ? `${rel(iso)}<span class="abs">${absFmt.format(new Date(iso))}</span>` : '<span class="abs">hiç</span>';
+const lastActive = u => Math.max(Date.parse(u.last_sign_in_at || 0) || 0, Date.parse(u.last_seen_at || 0) || 0);
+const has = (q, ...names) => !q || names.some(n => String(n).toLocaleLowerCase('tr').includes(q));
+let users = [], nicks = [], ozet = null, tab = 'users';
+// Uygulamadaki sayaç adları ve paneldeki karşılıkları
+const FEATS = {
+  acilis: ['Uygulamayı açma', 'Genel'], sekme_daily: ['Günlük sekmesi', 'Gezinme'], sekme_calendar: ['Takvim sekmesi', 'Gezinme'], sekme_friends: ['Arkadaşlar sekmesi', 'Gezinme'],
+  bitti: ['İşi bitirme', 'Günlük'], atla: ['İşi atlama', 'Günlük'], sayac: ['Sayaç başlatma', 'Günlük'], ornek_gorev: ['Örnek görevlerle deneme', 'Günlük'],
+  is_ekle_tekrarli: ['Tekrarlı iş ekleme', 'İşler'], is_ekle_tek: ['Tek seferlik iş ekleme', 'İşler'], is_duzenle: ['İş düzenleme', 'İşler'], is_sil: ['İş silme', 'İşler'], hatirlatma_sec: ['Hatırlatma süresi seçme', 'İşler'], oncelik_sec: ['Öncelik seçme', 'İşler'], oncelik_filtre: ['Önceliğe göre süzme', 'İşler'],
+  takvim_month: ['Takvim: Ay görünümü', 'Takvim'], takvim_week: ['Takvim: Hafta çizelgesi', 'Takvim'], takvim_list: ['Takvim: Liste', 'Takvim'], takvim_saat: ['Çizelgede boş saate iş ekleme', 'Takvim'],
+  dunu_duzelt: ['Dünü düzeltme', 'Seri'], izin_gunu: ['İzin günü kullanma', 'Seri'], seri_karti: ['Seri kartını açma', 'Seri'],
+  arkadaslar: ['Arkadaşlar bölümü', 'Sosyal'], arkadas_ekle: ['Kodla arkadaş ekleme', 'Sosyal'], ekipten_arkadas: ['Ekipten arkadaş ekleme', 'Sosyal'], durt: ['Dürtme', 'Sosyal'],
+  akis: ['Akış bölümü', 'Sosyal'], tepki: ['Tepki gönderme', 'Sosyal'], tepki_not: ['Tepkiye not ekleme', 'Sosyal'], paylas: ['İş paylaşma', 'Sosyal'], plan_kopyala: ['Paylaşılan planı listeye ekleme', 'Sosyal'],
+  ekipler: ['Ekipler bölümü', 'Ekip'], ekip_kur: ['Ekip kurma', 'Ekip'], ekibe_katil: ['Ekibe katılma', 'Ekip'], gorev_ver: ['Görev verme', 'Ekip'], ortak_is_ekle: ['Ortak iş ekleme', 'Ekip'], ortak_is_bitir: ['Ortak işi bitirme', 'Ekip'], yetki_ver: ['Yetki verme', 'Ekip'],
+  dakika: ['Uygulamada geçen dakika', 'Genel'], mazeret: ['Bugün yapılamadı işaretleme', 'Günlük'], surukle_planla: ['Sürükleyerek planlama', 'Takvim'], mesaj_gonder: ['Mesaj gönderme', 'Genel'], renk_sec: ['İşe renk verme', 'İşler'], tasi: ['Rutin işi bir kereliğine taşıma', 'İşler'], pdf: ['Takvimi PDF olarak kaydetme', 'Takvim'], tekrarli_gizle: ['Çizelgede tekrarlı işleri gizleme/gösterme', 'Takvim'],
+  tema: ['Tema değiştirme', 'Ayarlar'], ton: ['Mesaj tonu değiştirme', 'Ayarlar'], bildirim_ac: ['Bildirimleri açma', 'Ayarlar'], yedek_indir: ['Yedek indirme', 'Ayarlar'], yedek_yukle: ['Yedekten ekleme', 'Ayarlar']
+};
+const featName = f => (FEATS[f] || [f.replace(/_/g, ' '), 'Diğer']);
+let feats = null, days = [], gun = 30, featErr = '';
+const nf = new Intl.NumberFormat('tr-TR');
+const dayFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' });
+function drawFeats() {
+  document.querySelectorAll('[data-gun]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.gun === gun)));
+  const none = $('featsNone');
+  if (featErr) { $('featTiles').innerHTML = ''; $('dayBars').innerHTML = ''; $('dayAxis').innerHTML = ''; $('featRows').innerHTML = ''; none.hidden = false; none.textContent = featErr; $('stats').innerHTML = ''; return; }
+  if (!feats) { none.hidden = false; none.textContent = 'Yükleniyor…'; return; }
+  const q = $('q').value.trim().toLocaleLowerCase('tr');
+  drawPeople();
+  // "Uygulamayı açma", geçen dakika ve sekme geçişleri gezinme sayılır; en çok kullanılan özellik bunlar dışında seçilir
+  const real = feats.filter(f => f.feature !== 'acilis' && f.feature !== 'dakika' && !f.feature.startsWith('sekme_'));
+  const top = real[0], topUsers = [...real].sort((a, b) => b.kisi - a.kisi)[0];
+  const total = feats.reduce((a, f) => a + Number(f.toplam), 0);
+  const open = feats.find(f => f.feature === 'acilis');
+  const peak = days.reduce((m, d) => Math.max(m, Number(d.kisi)), 0);
+  $('featTiles').innerHTML = [
+    ['EN ÇOK KULLANILAN', top ? featName(top.feature)[0] : '—', top ? `${nf.format(top.toplam)} kez` : 'Henüz veri yok'],
+    ['EN ÇOK KİŞİ KULLANAN', topUsers ? featName(topUsers.feature)[0] : '—', topUsers ? `${nf.format(topUsers.kisi)} kişi` : ''],
+    ['UYGULAMAYI AÇAN', open ? `${nf.format(open.kisi)} kişi` : '0 kişi', open ? `${nf.format(open.toplam)} açılış` : ''],
+    ['TOPLAM İŞLEM', nf.format(total), `günde en çok ${nf.format(peak)} aktif kişi`]
+  ].map(([l, v, sub]) => `<div class="tile"><span>${l}</span><b>${esc(v)}</b><small>${esc(sub)}</small></div>`).join('');
+  // Günlük aktif kişi: tek seri, çubuk başına ipucu
+  const max = Math.max(1, peak);
+  $('dayBars').innerHTML = days.map((d, i) => {
+    const k = Number(d.kisi), date = dayFmt.format(new Date(d.day + 'T12:00:00'));
+    return `<span class="b${k ? '' : ' zero'}" tabindex="0" data-i="${i}" aria-label="${date}: ${k} aktif kişi, ${d.toplam} işlem"><i style="height:${Math.max(2, k / max * 100)}%"></i></span>`;
+  }).join('');
+  $('dayAxis').innerHTML = days.length ? `<span>${dayFmt.format(new Date(days[0].day + 'T12:00:00'))}</span><span>en çok ${peak} kişi</span><span>${dayFmt.format(new Date(days[days.length - 1].day + 'T12:00:00'))}</span>` : '';
+  const list = feats.filter(f => { const [n, c] = featName(f.feature); return has(q, n, c, f.feature); });
+  const maxT = Math.max(1, ...list.map(f => Number(f.toplam)));
+  $('featRows').innerHTML = list.map(f => {
+    const [n, c] = featName(f.feature), t = Number(f.toplam), o = Number(f.onceki);
+    const tr = !t && !o ? '' : !o ? '<span class="trend up">yeni</span>' : t === o ? '<span class="trend">aynı</span>'
+      : `<span class="trend ${t > o ? 'up' : 'down'}">${t > o ? '↑' : '↓'} %${Math.round(Math.abs(t - o) / o * 100)}</span>`;
+    return `<tr><td class="name"><span class="feat">${esc(n)}</span><span class="cat">${esc(c)}</span></td><td>${nf.format(t)}</td><td>${nf.format(f.kisi)}</td><td>${tr}</td><td>${f.son_gun ? dayFmt.format(new Date(f.son_gun + 'T12:00:00')) : ''}</td><td class="barcell"><i style="width:${t / maxT * 100}%"></i></td></tr>`;
+  }).join('');
+  none.hidden = list.length > 0;
+  none.textContent = feats.length ? 'Aramana uyan özellik yok.' : 'Bu dönemde kullanım kaydı yok. Sayaçlar, uygulama yeni sürümle açıldıktan sonra dolmaya başlar.';
+  $('stats').innerHTML = `<span><b>${feats.length}</b>özellik kullanıldı</span><span><b>${gun}</b>günlük dönem</span>`;
+}
+// Kişi başına kullanım: bugünkü açılış ve dakika, dönem içinde aktif gün başına ortalama
+let people = null;
+const dk = n => { n = Number(n); return n >= 60 ? `${Math.floor(n / 60)} sa ${n % 60} dk` : `${n} dk`; };
+function drawPeople() {
+  const none = $('peopleNone'), q = $('q').value.trim().toLocaleLowerCase('tr');
+  if (!people) { $('peopleRows').innerHTML = ''; none.hidden = false; none.textContent = 'Yükleniyor…'; return; }
+  const list = people.filter(p => has(q, p.full_name));
+  $('peopleRows').innerHTML = list.map(p => {
+    const g = Math.max(1, Number(p.aktif_gun)), ac = Number(p.acilis) / g, m = Math.round(Number(p.dakika) / g);
+    const today = Number(p.bugun_acilis) || Number(p.bugun_dakika) ? `${nf.format(p.bugun_acilis)} açılış<span class="abs">${dk(p.bugun_dakika)}</span>` : '<span class="abs">bugün açmadı</span>';
+    return `<tr><td class="name">${esc(p.full_name)}</td><td>${today}</td><td>${ac.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} açılış<span class="abs">${dk(m)}</span></td><td>${nf.format(p.aktif_gun)} / ${gun} gün</td><td>${p.son_gun ? dayFmt.format(new Date(p.son_gun + 'T12:00:00')) : ''}</td></tr>`;
+  }).join('');
+  none.hidden = list.length > 0;
+  none.textContent = people.length ? 'Aramana uyan kişi yok.' : 'Bu dönemde kullanım kaydı yok. Açılış ve dakika sayaçları uygulamanın yeni sürümüyle dolmaya başlar.';
+}
+async function loadFeats() {
+  feats = null; people = null; drawFeats();
+  const [f, d, pp] = await Promise.all([sb.rpc('yonetici_ozellikler', { p_gun: gun }), sb.rpc('yonetici_kullanim_gunluk', { p_gun: gun }), sb.rpc('yonetici_kisi_kullanim', { p_gun: gun })]);
+  people = pp.error ? [] : (pp.data || []);
+  if (f.error || d.error) { featErr = /yonetici_ozellikler|PGRST202|42883/.test(String((f.error || d.error).message) + (f.error || d.error).code) ? 'Özellik sayaçları henüz kurulmadı. supabase/15-ozellik-kullanimi.sql dosyasını çalıştır.' : hataMesaji(f.error || d.error); }
+  else { featErr = ''; feats = (f.data || []).sort((a, b) => b.toplam - a.toplam); days = d.data || []; }
+  if (tab === 'feats') drawFeats();
+}
+// Çubuk ipucu
+const tipEl = document.createElement('div'); tipEl.className = 'tip'; tipEl.hidden = true;
+function showTip(b) {
+  const d = days[+b.dataset.i]; if (!d) return;
+  tipEl.innerHTML = `<b>${dayFmt.format(new Date(d.day + 'T12:00:00'))}</b> · ${d.kisi} aktif kişi · ${nf.format(d.toplam)} işlem`;
+  $('dayBars').appendChild(tipEl); tipEl.hidden = false;
+  const r = b.getBoundingClientRect(), pr = $('dayBars').getBoundingClientRect(), w = tipEl.offsetWidth;
+  tipEl.style.left = Math.min(Math.max(r.left - pr.left + r.width / 2, w / 2), pr.width - w / 2) + 'px';
+}
+['mouseover', 'focusin'].forEach(ev => $('dayBars').addEventListener(ev, e => { const b = e.target.closest('.b'); if (b) showTip(b); }));
+['mouseleave', 'focusout'].forEach(ev => $('dayBars').addEventListener(ev, () => { tipEl.hidden = true; }));
+$('dayBars').addEventListener('click', e => { const b = e.target.closest('.b'); if (b) showTip(b); });
+document.querySelector('.period').addEventListener('click', e => { const b = e.target.closest('[data-gun]'); if (!b) return; gun = +b.dataset.gun; loadFeats(); });
+
+// ---- mesajlar ----
+// Kullanıcıların uygulamadan gönderdiği hata bildirimleri ve öneriler; okunmamışlar üstte
+let msgs = null, msgKind = '', msgErr = '';
+const KINDS = { hata: 'Hata', oneri: 'Öneri', diger: 'Diğer' };
+function drawMsgs() {
+  document.querySelectorAll('[data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === msgKind)));
+  const none = $('msgsNone'), q = $('q').value.trim().toLocaleLowerCase('tr');
+  if (msgErr) { $('msgList').innerHTML = ''; none.hidden = false; none.textContent = msgErr; return; }
+  if (!msgs) { none.hidden = false; none.textContent = 'Yükleniyor…'; return; }
+  const list = msgs.filter(m => (!msgKind || m.kind === msgKind) && has(q, m.full_name, m.body));
+  $('msgList').innerHTML = list.map(m => `<article class="m${m.read_at ? '' : ' unread'}">`
+    + `<div class="m-top"><span class="kind ${m.kind}">${KINDS[m.kind] || m.kind}</span><b>${esc(m.full_name)}</b><span>${rel(m.created_at)}</span></div>`
+    + `<p>${esc(m.body)}</p>${m.info ? `<span class="info">${esc(m.info)}</span>` : ''}`
+    + `<div class="m-acts"><button class="linkbtn" type="button" data-read="${m.id}" data-on="${m.read_at ? '0' : '1'}">${m.read_at ? 'Okunmadı yap' : 'Okundu yap'}</button></div></article>`).join('');
+  none.hidden = list.length > 0;
+  none.textContent = msgs.length ? 'Bu filtreye uyan mesaj yok.' : 'Henüz mesaj gelmedi. Kullanıcılar uygulamada Hesabım → Mesaj gönder bölümünden yazabilir.';
+  const unread = msgs.filter(m => !m.read_at).length;
+  $('stats').innerHTML = `<span><b>${msgs.length}</b>mesaj</span><span><b>${unread}</b>okunmamış</span><span><b>${msgs.filter(m => m.kind === 'hata').length}</b>hata bildirimi</span>`;
+}
+function drawMsgCount() {
+  const n = msgs ? msgs.filter(m => !m.read_at).length : 0;
+  $('msgCount').hidden = !n; $('msgCount').textContent = n;
+}
+async function loadMsgs() {
+  const { data, error } = await sb.rpc('yonetici_mesajlar');
+  msgErr = error ? (/yonetici_mesajlar|PGRST202|42883/.test(String(error.message) + error.code) ? 'Mesajlar henüz kurulmadı. supabase/17-kullanim-ve-mesajlar.sql dosyasını çalıştır.' : hataMesaji(error)) : '';
+  msgs = error ? [] : (data || []);
+  drawMsgCount();
+  if (tab === 'msgs') drawMsgs();
+}
+$('msgsWrap').addEventListener('click', async e => {
+  const k = e.target.closest('[data-kind]');
+  if (k) { msgKind = k.dataset.kind; drawMsgs(); return; }
+  const b = e.target.closest('[data-read]'); if (!b) return;
+  const on = b.dataset.on === '1', m = msgs.find(x => x.id === b.dataset.read); if (!m) return;
+  b.disabled = true;
+  const { error } = await sb.rpc('yonetici_mesaj_okundu', { p_id: m.id, p_okundu: on });
+  if (error) { b.disabled = false; return; }
+  m.read_at = on ? new Date().toISOString() : null;
+  drawMsgCount(); drawMsgs();
+});
+
+function draw() {
+  const q = $('q').value.trim().toLocaleLowerCase('tr');
+  for (const t of ['users', 'nicks', 'feats', 'msgs']) { $('tab-' + t).setAttribute('aria-selected', String(tab === t)); $(t + 'Wrap').hidden = tab !== t; }
+  $('q').placeholder = tab === 'feats' ? 'Özellik ya da kişi ara' : tab === 'msgs' ? 'Mesajlarda ara' : 'İsimle ara';
+  if (tab === 'feats') { drawFeats(); return; }
+  if (tab === 'msgs') { drawMsgs(); return; }
+
+  if (tab === 'users') {
+    const list = users.filter(u => has(q, u.full_name));
+    $('userRows').innerHTML = list.map(u => {
+      const active = Date.now() - lastActive(u) < 24 * 3600e3;
+      return `<tr><td class="name">${active ? '<span class="dot" title="Son 24 saatte aktif"></span>' : ''}${esc(u.full_name)}</td><td>${cell(u.last_sign_in_at)}</td><td>${cell(u.last_seen_at)}</td><td>${cell(u.created_at)}</td></tr>`;
+    }).join('');
+    $('usersNone').hidden = list.length > 0;
+    const week = users.filter(u => Date.now() - lastActive(u) < 7 * 24 * 3600e3).length;
+    $('stats').innerHTML = `<span><b>${users.length}</b>kullanıcı</span><span><b>${ozet ? ozet.bugun_is_yapan : 0}</b>bugün iş yapan</span><span><b>${week}</b>son 7 günde aktif</span><span><b>${ozet ? ozet.arkadaslik : 0}</b>arkadaşlık</span>`;
+  } else {
+    const list = nicks.filter(n => has(q, n.takan, n.hedef, n.lakap));
+    $('nickRows').innerHTML = list.map(n =>
+      `<tr><td class="name">${esc(n.takan)}</td><td class="arrow" aria-label="kime">→</td><td class="name">${esc(n.hedef)}</td><td class="nick">${esc(n.lakap)}</td><td>${cell(n.updated_at)}</td></tr>`).join('');
+    const none = $('nicksNone');
+    none.hidden = list.length > 0;
+    none.textContent = nicks.length ? 'Aramana uyan lakap yok.' : 'Henüz kimse lakap takmamış.';
+    const people = new Set(nicks.map(n => n.takan)).size;
+    $('stats').innerHTML = `<span><b>${nicks.length}</b>lakap</span><span><b>${people}</b>kişi lakap takmış</span>`;
+  }
+}
+
+async function load() {
+  $('refresh').disabled = true;
+  const [u, n, o] = await Promise.all([sb.rpc('yonetici_kullanicilar'), sb.rpc('yonetici_lakaplar'), sb.rpc('yonetici_ozet')]);
+  $('refresh').disabled = false;
+  $('loading').hidden = true;
+  const error = u.error || n.error;
+  if (error) {
+    $('content').hidden = true;
+    $('err').hidden = false;
+    $('err').textContent = error.code === '42501' ? 'Bu sayfa yalnızca yönetici hesabıyla açılır.' : hataMesaji(error);
+    return;
+  }
+  users = u.data || []; nicks = n.data || []; ozet = o.error ? null : o.data;
+  $('err').hidden = true; $('content').hidden = false;
+  draw();
+  loadFeats();
+  loadMsgs();
+}
+
+sb.auth.getSession().then(({ data }) => {
+  if (!data.session) { location.replace('giris.html'); return; }
+  load();
+});
+document.querySelector('.seg').addEventListener('click', e => {
+  const b = e.target.closest('[data-tab]'); if (!b) return;
+  tab = b.dataset.tab; draw();
+});
+$('q').addEventListener('input', draw);
+$('refresh').addEventListener('click', load);
+})();
+</script>
+</body>
+</html>
