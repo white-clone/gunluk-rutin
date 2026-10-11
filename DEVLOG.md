@@ -110,8 +110,17 @@ Netleşenler:
   son kullanım, oran çubuğu), aramayla süzme. "En çok kullanılan" hesabında açılış ve sekme geçişleri sayılmaz.
 - Veritabanı: `supabase/15-ozellik-kullanimi.sql` (feature_usage, kullanim_yaz, yonetici_ozellikler, yonetici_kullanim_gunluk).
 
+## 2026-10-11 — Canlı veritabanı
+- 11–15 Supabase'e (gunluk-rutin) parça parça uygulandı. Farklar: gorev_ver'in eski 10 parametreli sürümü silinmedi,
+  yeni sürüme yönlendirir; yeni 11 parametreli sürümde p_not ve p_hatirlat varsayılansız (belirsizlik olmasın diye).
+  hatirlatma_listesi "drop" yerine "create or replace" ile güncellendi.
+- Silme ifadesi içeren iki fonksiyon (ortak_is_bitir, tepki_ver) bağlantı onay istediği için uygulanamadı →
+  `supabase/16-bekleyen-adimlar.sql` kullanıcı tarafından SQL Editor'de çalıştırılacak.
+- Site henüz güncellenmedi (16 çalışınca PR açılıp birleştirilecek).
+
 ## Sıradaki adımlar
-- 11, 12, 13, 14 ve 15 numaralı SQL dosyaları Supabase'de sırayla çalıştırılacak.
+- 16-bekleyen-adimlar.sql Supabase SQL Editor'de çalıştırılacak.
+- Ardından PR açılıp ana dala birleştirilecek (site güncellenir).
 - Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
 - Ekip müsaitlik görünümü (haftalık çizelgede üyelerin dolu saatleri).
 - Kutlama ve titreşim.
