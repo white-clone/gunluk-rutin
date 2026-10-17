@@ -118,9 +118,15 @@ Netleşenler:
   `supabase/16-bekleyen-adimlar.sql` kullanıcı tarafından SQL Editor'de çalıştırılacak.
 - Site henüz güncellenmedi (16 çalışınca PR açılıp birleştirilecek).
 
+## 2026-10-17 — Durum
+- 16-bekleyen-adimlar.sql kullanıcı tarafından çalıştırıldı; ortak_is_bitir ve tepki_ver canlıda.
+- Ana dal (main, yayındaki site) 10 Ekim'de bu daldan bağımsız tek commit'le ("Günlük Rutin sitesi") yeniden yayınlanmış.
+  O sürüm bu daldaki bütün özellikleri içeriyor, ek olarak "öncelik" (priority) özelliği var (veritabanında tasks.priority,
+  team_tasks.priority; gorev_ver ve ortak_is_kaydet p_oncelik alıyor). Bu dal main'den geride: birleştirilmemeli.
+- main'de supabase/ klasörü, DEVLOG ve YAPILACAKLAR yok (yalnızca site dosyaları).
+
 ## Sıradaki adımlar
-- 16-bekleyen-adimlar.sql Supabase SQL Editor'de çalıştırılacak.
-- Ardından PR açılıp ana dala birleştirilecek (site güncellenir).
+- Yeni geliştirmeler main üzerinden yapılmalı (bu dal eski).
 - Ana ekran sadeleştirme: liste önde, Şimdi kartı kalkar, seri ayrı sayfa, renk anlamları.
 - Ekip müsaitlik görünümü (haftalık çizelgede üyelerin dolu saatleri).
 - Kutlama ve titreşim.
