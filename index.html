@@ -153,6 +153,9 @@ button.mk::after,.mark::after{content:"";position:absolute;inset:-12px -6px}
 .seg2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-bottom:1px solid var(--line)}
 .seg2 button{border:0;background:none;padding:10px 0;font-weight:600;color:var(--ink-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .seg2 button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.bs-prog{display:grid;gap:6px}.bs-prog[hidden]{display:none}
+.bs-prog-bar{height:6px;border-radius:var(--radius-pill);background:var(--accent-soft);overflow:hidden}
+.bs-prog-bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:inherit;transition:width .25s ease}
 .range{display:flex;align-items:center;gap:6px}
 .range input{min-width:0}
 .field .range input{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:var(--radius-md);padding:11px 12px;color:var(--ink)}
@@ -845,6 +848,7 @@ input,textarea{caret-color:var(--accent)}
           <button class="btn primary" type="button" id="basucuBagBtn">Bağla</button>
         </div>
         <div class="row-btns" id="basucuBagli" hidden><button class="btn secondary" type="button" id="basucuSyncBtn">Şimdi eşitle</button><span class="grow"></span><button class="btn ghost" type="button" id="basucuKoparBtn">Bağlantıyı kaldır</button></div>
+        <div class="bs-prog" id="basucuProg" hidden><div class="bs-prog-bar"><i id="basucuProgFill"></i></div><span class="hint" id="basucuProgTxt" aria-live="polite"></span></div>
       </div>
     </details>
     <button class="btn secondary block" type="button" data-openfb>Hata bildir ya da öneri yaz</button>
@@ -1077,6 +1081,21 @@ function drawBasucu() {
   const son = BASUCU.last_sync_at ? new Date(BASUCU.last_sync_at).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'henüz yok';
   $('basucuState').textContent = `Bağlı. Saatli işlerin Başucu Rehberim takviminde "Dolu" görünür, derslerin burada listelenir. Son eşitleme: ${son}.` + (BASUCU.last_error ? ' Son denemede bir sorun oldu, kendiliğinden tekrar denenecek.' : '');
 }
+// Eşitleme tek bir sunucu isteği; gerçek ilerleme bilinmediği için yüzde tahminidir:
+// istek sürerken %90'a doğru yavaşlayarak dolar, cevap gelince %100 olur.
+function basucuIlerleme(etiket) {
+  const kutu = $('basucuProg'), dolgu = $('basucuProgFill'), yazi = $('basucuProgTxt');
+  let p = 0;
+  const ciz = () => { dolgu.style.width = p + '%'; yazi.textContent = `${etiket}… %${Math.round(p)}`; };
+  kutu.hidden = false; ciz();
+  const t = setInterval(() => { p += (90 - p) * 0.08; ciz(); }, 200);
+  return (sonuc) => {
+    clearInterval(t);
+    if (sonuc) { p = 100; dolgu.style.width = '100%'; yazi.textContent = sonuc; setTimeout(() => { kutu.hidden = true; }, 4000); }
+    else kutu.hidden = true;
+  };
+}
+const basucuOzet = r => `Tamamlandı: ${r && r.ders || 0} ders getirildi, ${r && r.dolu || 0} saat "Dolu" işaretlendi.`;
 async function basucuButon(btn, is) {
   btn.disabled = true;
   try { await is(); } catch (e) { toast(basucuHata(e.message)); } finally { btn.disabled = false; drawBasucu(); }
@@ -1084,7 +1103,10 @@ async function basucuButon(btn, is) {
 $('basucuBagBtn').addEventListener('click', () => basucuButon($('basucuBagBtn'), async () => {
   const kod = $('basucuKod').value.trim().toUpperCase().replace(/\s/g, '');
   if (!kod) { $('basucuKod').focus(); return; }
-  const r = await basucuCall({ islem: 'bagla', kod });
+  const bitir = basucuIlerleme('Bağlanıp eşitleniyor');
+  let r;
+  try { r = await basucuCall({ islem: 'bagla', kod }); } catch (e) { bitir(); throw e; }
+  bitir(basucuOzet(r));
   BASUCU = { last_sync_at: new Date().toISOString(), last_error: null };
   $('basucuKod').value = '';
   track('basucu_bagla');
@@ -1092,9 +1114,11 @@ $('basucuBagBtn').addEventListener('click', () => basucuButon($('basucuBagBtn'),
   await reloadFromServer();
 }));
 $('basucuSyncBtn').addEventListener('click', () => basucuButon($('basucuSyncBtn'), async () => {
-  await basucuCall({ islem: 'esitle' });
+  const bitir = basucuIlerleme('Eşitleniyor');
+  let r;
+  try { r = await basucuCall({ islem: 'esitle' }); } catch (e) { bitir(); throw e; }
+  bitir(basucuOzet(r));
   BASUCU = Object.assign({}, BASUCU, { last_sync_at: new Date().toISOString(), last_error: null });
-  toast('Eşitlendi.');
   await reloadFromServer();
 }));
 $('basucuKoparBtn').addEventListener('click', () => basucuButon($('basucuKoparBtn'), async () => {
@@ -1848,7 +1872,8 @@ function onAction(e) {
     case 'gtoggle': { const t = find(id); if (t) { t.done = !t.done; t.doneAt = t.done ? Date.now() : 0; if (t.done) { track('bitti'); buzz(20); } } break; }
     case 'listEdit': listEdit = listEdit === b.dataset.list ? '' : b.dataset.list; break;
     case 'delTask': askDelete(id); return;
-    case 'clearDone': S.tasks = S.tasks.filter(t => !(t.type === 'general' && t.done)); toast('Tamamlananlar temizlendi.'); break;
+    // Başucu'dan gelen dersler "tamamlananları temizle" ile silinmez (aksi halde Başucu'da da silinmesi gerekirdi).
+    case 'clearDone': S.tasks = S.tasks.filter(t => !(t.type === 'general' && t.done && !t.ext)); toast('Tamamlananlar temizlendi.'); break;
     case 'edit': openSheet(id); return;
     default: return;
   }
@@ -3654,7 +3679,17 @@ $('cfNo').addEventListener('click', () => $('confirmBox').close('hayir'));
 // İşi sor, onaylanırsa sil
 async function askDelete(id, after) {
   const t = find(id); if (!t || t.assigned) return false;
-  if (t.ext) { toast('Bu ders Başucu Rehberim\'den geliyor; silmek ya da iptal etmek için Başucu Rehberim\'i kullan.'); return false; }
+  if (t.ext) {
+    // Kurumun verdiği ders silinemez; öğretmenin kendi eklediği ders/not iki taraftan da silinir.
+    if (t.extLocked) { toast('Bu ders kurumun programından geliyor; burada silinemez. Değişiklik için kurumla görüş.'); return false; }
+    if (!await confirmBox(`"${t.name}" silinsin mi?`, 'Bu kayıt Başucu Rehberim\'den geliyor; orada da silinir. Bu işlem geri alınamaz.')) return false;
+    try { await basucuCall({ islem: 'dersSil', id }); }
+    catch (e) { toast(e.message === 'kilitli' ? 'Bu ders burada silinemez.' : basucuHata(e.message)); return false; }
+    forgetToday(id); S.tasks = S.tasks.filter(x => x.id !== id); synced.tasks.delete(id);
+    if (after) after();
+    track('basucu_ders_sil'); render(); toast(`"${t.name}" iki taraftan da silindi.`);
+    return true;
+  }
   const parts = [];
   if (t.type === 'daily') parts.push(`Bu iş ${daysLabel(t.days).toLocaleLowerCase('tr')} tekrarlanıyor; silersen bütün günlerden kalkar. Geçmiş serin etkilenmez.`);
   if (isShared(t)) parts.push('Paylaştığın kişilerin takviminden de kalkar.');
@@ -3768,6 +3803,11 @@ setInterval(() => {
   TRACK.dakika = (TRACK.dakika || 0) + 1; // her dakika istek atmamak için: on dakikada bir ya da uygulama kapanırken gönderilir
   if (TRACK.dakika >= 10) flushTrack();
 }, 60000);
+// Başucu Rehberim bağlıyken orada eklenen/silinen dersler açık sayfaya da gelsin
+// (sunucu eşitlemesi en geç 10 dakikada bir çalışır).
+setInterval(() => {
+  if (loaded && !document.hidden && BASUCU) reloadFromServer();
+}, 3 * 60000);
 document.addEventListener('visibilitychange', () => {
   if (!loaded) return;
   if (document.hidden) { hiddenAt = Date.now(); clearTimeout(syncTimer); sync(); flushTrack(); }
