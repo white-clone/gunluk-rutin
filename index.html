@@ -597,7 +597,7 @@ input,textarea{caret-color:var(--accent)}
 .day-h.late,.tr-day.late{color:var(--streak)}
 .tray .tr-day{margin:var(--space-3) 0 0;font:600 13px/18px var(--font-sans);color:var(--ink)}
 /* PDF olarak kaydet: düğme ve yazdırma sayfası (her zaman beyaz zemin, siyah yazı) */
-.cal-tools{display:flex;justify-content:flex-end}
+.cal-tools{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 .tg-tools .grow{flex:1}
 .pr-btn{display:inline-flex;align-items:center;gap:6px;color:var(--ink)}
 #printArea{display:none}
@@ -836,6 +836,17 @@ input,textarea{caret-color:var(--accent)}
         <button class="btn primary" type="submit" id="pwSave">Şifreyi değiştir</button>
       </form>
     </details>
+    <details class="acc-sec" id="basucuSec" hidden>
+      <summary>BAŞUCU REHBERİM</summary>
+      <div class="acc-form">
+        <p class="hint" id="basucuState"></p>
+        <div id="basucuBagla">
+          <div class="field"><label for="basucuKod">BAĞLANTI KODU</label><input id="basucuKod" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+          <button class="btn primary" type="button" id="basucuBagBtn">Bağla</button>
+        </div>
+        <div class="row-btns" id="basucuBagli" hidden><button class="btn secondary" type="button" id="basucuSyncBtn">Şimdi eşitle</button><span class="grow"></span><button class="btn ghost" type="button" id="basucuKoparBtn">Bağlantıyı kaldır</button></div>
+      </div>
+    </details>
     <button class="btn secondary block" type="button" data-openfb>Hata bildir ya da öneri yaz</button>
     <details class="acc-sec">
       <summary>YEDEK</summary>
@@ -1036,6 +1047,63 @@ const profRow = () => {
   return JSON.stringify({ best_streak: S.best, streak: currentStreak(), today_done: list.filter(t => r.done.includes(t.id)).length, today_total: list.length, progress_day: today() });
 };
 let syncTimer = null, syncing = false, syncAgain = false, loaded = false;
+// ---- Başucu Rehberim bağlantısı (supabase/20-basucu.sql, basucu-esitle) ----
+let HAS_BASUCU = false, BASUCU = null, basucuTimer = null;
+function kickBasucu(delay = 2500) {
+  clearTimeout(basucuTimer);
+  basucuTimer = setTimeout(async () => {
+    const { data, error } = await sb.functions.invoke('basucu-esitle', { body: { islem: 'esitle' } }).catch(e => ({ error: e }));
+    if (!error && data && data.ok) { BASUCU = Object.assign({}, BASUCU, { last_sync_at: new Date().toISOString(), last_error: null }); reloadFromServer(); }
+    drawBasucu();
+  }, delay);
+}
+async function basucuCall(body) {
+  const { data, error } = await sb.functions.invoke('basucu-esitle', { body });
+  if (!error) return data;
+  let kod = '';
+  try { kod = (await error.context.json()).error || ''; } catch (e) {}
+  throw new Error(kod || 'baglanti');
+}
+const basucuHata = k => ({
+  kod_gecersiz: 'Kod geçersiz ya da süresi dolmuş. Başucu Rehberim\'den yeni bir kod al.',
+  baska_hesaba_bagli: 'Bu Başucu Rehberim hesabı başka bir Günlük Rutin hesabına bağlı.',
+  servis_hesabi_yok: 'Bağlantı henüz kurulmadı (sunucu ayarı eksik). Biraz sonra tekrar dene.',
+}[k] || 'Bağlanamadı. İnternet bağlantını kontrol edip tekrar dene.');
+function drawBasucu() {
+  const sec = $('basucuSec'); if (!sec) return;
+  sec.hidden = !(HAS_BASUCU && (BASUCU || (PROFILE && PROFILE.is_admin))); // deneme süresince yalnızca yöneticide
+  $('basucuBagla').hidden = !!BASUCU; $('basucuBagli').hidden = !BASUCU;
+  if (!BASUCU) { $('basucuState').textContent = 'Başucu Rehberim\'de Ayarlar → "Günlük Rutin bağlantısı" bölümünden aldığın kodu yaz. Saatli işlerin oradaki takviminde "Dolu" görünür, bu hafta ve gelecek haftaki derslerin burada listelenir.'; return; }
+  const son = BASUCU.last_sync_at ? new Date(BASUCU.last_sync_at).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'henüz yok';
+  $('basucuState').textContent = `Bağlı. Saatli işlerin Başucu Rehberim takviminde "Dolu" görünür, derslerin burada listelenir. Son eşitleme: ${son}.` + (BASUCU.last_error ? ' Son denemede bir sorun oldu, kendiliğinden tekrar denenecek.' : '');
+}
+async function basucuButon(btn, is) {
+  btn.disabled = true;
+  try { await is(); } catch (e) { toast(basucuHata(e.message)); } finally { btn.disabled = false; drawBasucu(); }
+}
+$('basucuBagBtn').addEventListener('click', () => basucuButon($('basucuBagBtn'), async () => {
+  const kod = $('basucuKod').value.trim().toUpperCase().replace(/\s/g, '');
+  if (!kod) { $('basucuKod').focus(); return; }
+  const r = await basucuCall({ islem: 'bagla', kod });
+  BASUCU = { last_sync_at: new Date().toISOString(), last_error: null };
+  $('basucuKod').value = '';
+  track('basucu_bagla');
+  toast(`Başucu Rehberim'e bağlandı: ${r.ders || 0} ders getirildi, ${r.dolu || 0} saat "Dolu" olarak işaretlendi.`);
+  await reloadFromServer();
+}));
+$('basucuSyncBtn').addEventListener('click', () => basucuButon($('basucuSyncBtn'), async () => {
+  await basucuCall({ islem: 'esitle' });
+  BASUCU = Object.assign({}, BASUCU, { last_sync_at: new Date().toISOString(), last_error: null });
+  toast('Eşitlendi.');
+  await reloadFromServer();
+}));
+$('basucuKoparBtn').addEventListener('click', () => basucuButon($('basucuKoparBtn'), async () => {
+  if (!await confirmBox('Bağlantı kaldırılsın mı?', 'Başucu Rehberim\'den gelen dersler buradan, işlerinden gelen "Dolu" saatler de Başucu takviminden kalkar. İşlerin ve derslerin silinmez.')) return;
+  await basucuCall({ islem: 'kopar' });
+  BASUCU = null;
+  toast('Bağlantı kaldırıldı.');
+  await reloadFromServer();
+}));
 function scheduleSync(delay = 600) {
   if (!loaded) return;
   clearTimeout(syncTimer);
@@ -1065,6 +1133,8 @@ async function sync() {
       if (error) throw error;
       del.forEach(id => synced.tasks.delete(id));
     }
+    // İşler değiştiyse Başucu Rehberim takvimine de yansıt (bağlıysa)
+    if ((up.length || del.length) && BASUCU) kickBasucu();
     if (days.length) {
       const { error } = await sb.from('day_logs').upsert(days);
       if (error) throw error;
@@ -1125,12 +1195,15 @@ const subIcons = t => [
   t.assigned ? ico(teamIcon, assignLabel(t) || 'Ekip görevi') : '',
   isShared(t) ? ico(shareIcon.replace(/width="16" height="16"/, 'width="13" height="13"'), 'Paylaşıldı') : '',
   notePreview(t) ? ico(noteIcon, 'Not: ' + notePreview(t)) : '',
-  HAS_REMIND && t.time && t.remind > 0 ? ico(bellIcon, `${remindName(t.remind)} hatırlatılır`) : ''
+  HAS_REMIND && t.time && t.remind > 0 ? ico(bellIcon, `${remindName(t.remind)} hatırlatılır`) : '',
+  t.ext ? ico(basucuIcon, t.extLocked ? 'Başucu Rehberim · kurum dersi' : 'Başucu Rehberim dersi') : ''
 ].join('');
+// Başucu Rehberim'den gelen ders işareti (logodaki açılan üç sayfa)
+const basucuIcon = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 14.5L3 4.5l2.2-.6L8 10.5M8 14.5l5-10-2.2-.6L8 10.5M8 14.5V2" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>';
 const shareIcon = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="4" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="3.5" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12.5" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" stroke="currentColor" stroke-width="1.5"/></svg>';
 // Takvimde silme: ilk basışta 'Sil?' olur, ikinci basışta siler (ekip görevlerinde yok)
-const calDel = t => t.assigned ? '' : `<button class="x del" type="button" data-caldel="${t.id}" aria-label="${esc(t.name)} işini sil" title="Sil">${trashIcon}</button>`;
-const shareBtn = t => t.assigned ? '' : `<button class="x share${isShared(t) ? ' on' : ''}" type="button" data-sharetask="${t.id}" aria-label="${esc(t.name)} işini paylaş" title="Paylaş">${shareIcon}</button>`;
+const calDel = t => t.assigned || t.ext ? '' : `<button class="x del" type="button" data-caldel="${t.id}" aria-label="${esc(t.name)} işini sil" title="Sil">${trashIcon}</button>`;
+const shareBtn = t => t.assigned || t.ext ? '' : `<button class="x share${isShared(t) ? ' on' : ''}" type="button" data-sharetask="${t.id}" aria-label="${esc(t.name)} işini paylaş" title="Paylaş">${shareIcon}</button>`;
 // Ekip görevi: kim verdi, hangi ekipten
 const assignLabel = t => t.assigned ? [t.by ? `${t.by} verdi` : '', t.team].filter(Boolean).join(' · ') : '';
 const timeLabel = t => t.time ? (t.end ? `${t.time}–${t.end}` : t.time) : '';
@@ -1868,17 +1941,23 @@ function openSheet(id, ctx) {
   $('fNote').value = t.note || ''; $('fNoteCount').textContent = '';
   $('fFromNote').hidden = !t.assignNote;
   $('fFromNote').innerHTML = t.assignNote ? `<b>${esc(t.by || 'Ekip başkanı')} not bıraktı:</b> ${esc(t.assignNote)}` : '';
-  $('fShareWrap').hidden = !!t.assigned;
-  if (!t.assigned) fillShareBox(t);
+  $('fShareWrap').hidden = !!t.assigned || !!t.ext;
+  if (!t.assigned && !t.ext) fillShareBox(t);
   $('fTime').value = t.time || ''; $('fEnd').value = t.end || '';
   $('fAllDay').checked = !t.time; $('fRange').hidden = $('fRangeHint').hidden = !t.time;
   fillRemind('fRemind', t.remind);
-  const locked = !!t.assigned;
+  const locked = !!t.assigned || !!t.ext;
   setPrio('fPrio', prioOf(t), locked); // ekip görevinin önceliğini veren belirler
   drawColor('fColor', t.color || ''); // renk kişisel; ekipten gelen işte de seçilebilir
   $('fName').disabled = locked; $('segDaily').disabled = locked; $('segGeneral').disabled = locked; $('delBtn').hidden = locked;
+  // Kurumun verdiği ders hiç değiştirilemez; öğretmenin kendi dersinin günü/saati değişebilir (Başucu'ya da yansır)
+  ['fTime', 'fEnd', 'fDue', 'fAllDay'].forEach(k => { $(k).disabled = !!t.extLocked; });
   $('fLock').hidden = !locked;
-  $('fLock').textContent = locked ? `Bu görevi ${t.by ? t.by + ', ' : ''}"${t.team}" ekibinden verdi. Adını değiştiremez ve silemezsin; günlerini ve saatini ayarlayabilirsin.` : '';
+  $('fLock').textContent = t.ext
+    ? (t.extLocked
+      ? 'Bu ders kurum programından geliyor (Başucu Rehberim). Burada değiştirilemez; değişiklik için kurumla görüş.'
+      : 'Bu ders Başucu Rehberim\'den geliyor. Gününü ve saatini burada değiştirebilirsin, Başucu Rehberim\'e de yansır. Silmek ya da iptal etmek için Başucu Rehberim\'i kullan.')
+    : locked ? `Bu görevi ${t.by ? t.by + ', ' : ''}"${t.team}" ekibinden verdi. Adını değiştiremez ve silemezsin; günlerini ve saatini ayarlayabilirsin.` : '';
   $('fName').value = t.name;
   $('fDur').value = t.dur || '';
   $('fDue').value = t.due || '';
@@ -2274,6 +2353,7 @@ function fillAccount() {
   $('toneWrap').hidden = !HAS_FEED; drawTone();
   document.querySelectorAll('[data-feedonly]').forEach(el => { el.hidden = !HAS_FEED; });
   updateNotifUi();
+  drawBasucu();
 }
 $('nameForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -2980,12 +3060,14 @@ const monday = k => shift(k, -wdIndex(k));
 const shortDate = k => { const d = parseKey(k); return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`; };
 // ---- takvimi PDF olarak kaydetme ----
 // Açık görünüm (Ay, Hafta ya da Liste) beyaz zeminli sade bir sayfaya dökülür; tarayıcının yazdırma penceresinden "PDF olarak kaydet" seçilir.
-const PRINT_BTN = `<button class="btn ghost sm pr-btn" type="button" data-print><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>PDF olarak kaydet</button>`;
+// "Bitenler" düğmesi: biten işlerin PDF'e yazılıp yazılmayacağını kişi seçer (liste sayfası zaten yalnızca açık işleri yazar)
+const printBtn = (toggle = true) => (toggle ? `<button class="tg-toggle" type="button" data-prdone aria-pressed="${!S.prNoDone}" title="Biten işler PDF'e yazılsın mı">Bitenler</button>` : '') + `<button class="btn ghost sm pr-btn" type="button" data-print><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>PDF olarak kaydet</button>`;
+const prKeep = x => !S.prNoDone || !x.done;
 const prItem = x => `<div class="pr-it${x.done ? ' ok' : ''}">${x.time ? `<b>${x.time}${x.end ? '–' + x.end : ''}</b> ` : ''}${esc(x.name)}${x.owner ? ` <i>· ${esc(x.owner)}</i>` : ''}</div>`;
 const prDayItems = k => dayItems(k).filter(it => !(S.hideRep && it.t.type === 'daily'))
   .map(it => ({ name: it.t.name, time: it.at.time, end: it.at.end, done: it.done }))
   .concat(plansOn(k).map(p => ({ name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', done: p.done, owner: p.kind === 'ortak' ? p.team_name : p.owner_name })))
-  .sort((a, b) => byTime(a, b));
+  .filter(prKeep).sort((a, b) => byTime(a, b));
 function printCalendar() {
   const t = today();
   let title, body, landscape = true;
@@ -3007,7 +3089,7 @@ function printCalendar() {
       const k = `${y}-${pad(m)}-${pad(d)}`;
       const list = general().filter(g => g.due === k).map(g => ({ name: g.name, time: g.time, end: g.end, done: g.done }))
         .concat(plansOn(k).filter(p => p.type === 'general').map(p => ({ name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', done: p.done, owner: p.kind === 'ortak' ? p.team_name : p.owner_name })))
-        .sort((a, b) => byTime(a, b));
+        .filter(prKeep).sort((a, b) => byTime(a, b));
       cells.push(`<td class="${k === t ? 'pr-today' : ''}"><span class="pr-n">${d}</span>${list.map(prItem).join('')}</td>`);
     }
     while (cells.length % 7) cells.push('<td class="pr-blank"></td>');
@@ -3031,7 +3113,7 @@ function renderCalendar() {
   if (!calMonth) calMonth = t.slice(0, 7);
   if (!calSel) calSel = t;
   let h = `<div class="seg2" role="tablist"><button type="button" role="tab" data-calview="month" aria-selected="${calView === 'month'}">Ay</button><button type="button" role="tab" data-calview="week" aria-selected="${calView === 'week'}">Hafta</button><button type="button" role="tab" data-calview="list" aria-selected="${calView === 'list'}">Liste</button></div>`;
-  if (calView !== 'week') h += `<div class="cal-tools">${PRINT_BTN}</div>`;
+  if (calView !== 'week') h += `<div class="cal-tools">${printBtn(calView !== 'list')}</div>`;
   if (calView === 'list') { fillView(view, deskWrap(h + generalHtml(), false), []); dropFlash = ''; return; }
   const prevTop = $('tgBody') ? $('tgBody').scrollTop : null;
   h += calView === 'week' ? weekHtml() : monthHtml();
@@ -3252,7 +3334,7 @@ function weekHtml() {
   return `<div class="cal-head"><button class="icon-btn" type="button" data-wknav="-${span}" aria-label="Önceki ${span} gün">‹</button>`
     + `<div class="cal-title"><b>${shortDate(start)} – ${shortDate(shift(start, span - 1))}</b><span class="st-sub">${stats}</span></div>`
     + `<button class="icon-btn" type="button" data-wknav="${span}" aria-label="Sonraki ${span} gün">›</button></div>`
-    + `<div class="tg-tools"><button class="tg-toggle" type="button" data-hiderep aria-pressed="${!S.hideRep}">Tekrarlı işler</button>${!inView ? `<button class="link" type="button" data-wknav="0">${span === 7 ? 'Bu haftaya dön' : 'Bugüne dön'}</button>` : ''}<span class="grow"></span>${PRINT_BTN}</div>`
+    + `<div class="tg-tools"><button class="tg-toggle" type="button" data-hiderep aria-pressed="${!S.hideRep}">Tekrarlı işler</button>${!inView ? `<button class="link" type="button" data-wknav="0">${span === 7 ? 'Bu haftaya dön' : 'Bugüne dön'}</button>` : ''}<span class="grow"></span>${printBtn()}</div>`
     + `<div class="tg${span === 3 ? ' d3' : ''}" data-h0="${h0}" data-start="${start}" data-span="${span}" style="--hh:${HH}px"><div class="tg-row tg-head">${head}</div><div class="tg-row tg-all">${all}</div>`
     + `<div class="tg-body" id="tgBody"><div class="tg-row">${bands}<div class="tg-hours" style="height:${H}px">${hours}${bandLabels}</div>${cols}</div></div></div>`
     + `<p class="hint">${isDesk() ? 'Boş bir saate tıklayarak iş ekleyebilir, soldaki işleri tutup bir güne ya da saate bırakabilirsin.' : 'Boş bir saate dokunarak o güne iş ekleyebilirsin.'}</p>`;
@@ -3344,6 +3426,7 @@ $('view-calendar').addEventListener('click', e => {
   if (lp) { listPrio = lp.dataset.lprio; if (listPrio) track('oncelik_filtre'); renderCalendar(); return; }
   const cv = e.target.closest('[data-calview]');
   if (cv) { calView = cv.dataset.calview; track('takvim_' + calView); calMonth = calSel.slice(0, 7); renderCalendar(); return; }
+  if (e.target.closest('[data-prdone]')) { S.prNoDone = !S.prNoDone; track('pdf_bitenler'); render(); return; }
   const hr = e.target.closest('[data-hiderep]');
   if (hr) { S.hideRep = !S.hideRep; track('tekrarli_gizle'); render(); return; }
   const wn = e.target.closest('[data-wknav]');
@@ -3571,6 +3654,7 @@ $('cfNo').addEventListener('click', () => $('confirmBox').close('hayir'));
 // İşi sor, onaylanırsa sil
 async function askDelete(id, after) {
   const t = find(id); if (!t || t.assigned) return false;
+  if (t.ext) { toast('Bu ders Başucu Rehberim\'den geliyor; silmek ya da iptal etmek için Başucu Rehberim\'i kullan.'); return false; }
   const parts = [];
   if (t.type === 'daily') parts.push(`Bu iş ${daysLabel(t.days).toLocaleLowerCase('tr')} tekrarlanıyor; silersen bütün günlerden kalkar. Geçmiş serin etkilenmez.`);
   if (isShared(t)) parts.push('Paylaştığın kişilerin takviminden de kalkar.');
@@ -3736,7 +3820,7 @@ async function reloadFromServer(first) {
       || Object.entries(S.days).some(([k, r]) => synced.days.get(k) !== JSON.stringify(dayRow(k, r)));
     if (pending) { render(); return null; }
   }
-  const [p, t, d, v, v2, v3, v4, v5, v6] = await Promise.all([
+  const [p, t, d, v, v2, v3, v4, v5, v6, v7] = await Promise.all([
     sb.from('profiles').select('full_name, friend_code, is_admin, best_streak, share_progress, remind_morning, remind_evening, weekly_summary, allow_poke, morning_time, evening_time, remind_tasks').eq('id', USER.id).single(),
     sb.from('tasks').select('*, teams!tasks_team_fk(name)').order('position'), // ekip adı: görevin kendi ekibi (paylaşım tablosu ikinci bir bağ oluşturuyor)
     sb.from('day_logs').select('*').gte('day', shift(today(), -400)),
@@ -3745,8 +3829,11 @@ async function reloadFromServer(first) {
     sb.from('profiles').select('message_tone, notify_reactions, notify_milestones').eq('id', USER.id).single(),
     sb.from('tasks').select('priority').limit(1),
     sb.from('tasks').select('color').limit(1),
-    sb.from('tasks').select('moves').limit(1)
+    sb.from('tasks').select('moves').limit(1),
+    sb.from('basucu_links').select('last_sync_at, last_error').maybeSingle()
   ]);
+  HAS_BASUCU = !v7.error;
+  BASUCU = HAS_BASUCU ? v7.data : null;
   HAS_PRIO = !v4.error;
   HAS_COLOR = !v5.error;
   HAS_MOVES = !v6.error;
@@ -3756,15 +3843,17 @@ async function reloadFromServer(first) {
   PROFILE = p.data;
   if (HAS_FEED) Object.assign(PROFILE, v3.data);
   fillAccount();
-  const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed, notifLater: S.notifLater, hideRep: S.hideRep };
+  const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed, notifLater: S.notifLater, hideRep: S.hideRep, prNoDone: S.prNoDone };
   S = Object.assign(blank(), ui);
-  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '', note: r.note || '', assignNote: r.assign_note || '', remind: r.remind_before === undefined ? 0 : r.remind_before, prio: r.priority === undefined ? 1 : r.priority, color: r.color || '', moves: Array.isArray(r.moves) ? r.moves : [] }));
+  S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '', note: r.note || '', assignNote: r.assign_note || '', remind: r.remind_before === undefined ? 0 : r.remind_before, prio: r.priority === undefined ? 1 : r.priority, color: r.color || '', moves: Array.isArray(r.moves) ? r.moves : [], ext: r.ext_source === 'basucu', extLocked: !!r.ext_locked }));
   for (const x of (v.error ? [] : v.data || [])) { const k = S.tasks.find(y => y.id === x.task_id); if (k) { k.by = x.veren || ''; if (x.ekip) k.team = x.ekip; } }
   for (const r of d.data) S.days[r.day] = { done: r.done || [], skip: r.skip || [], at: r.at || {}, total: r.total || 0, frozen: !!r.frozen };
   S.best = PROFILE.best_streak || 0;
   markSynced();
   loaded = true;
   if (!first) render();
+  // Açılışta Başucu'daki yeni dersleri hemen getir (her açılışta bir kez)
+  if (first && BASUCU) kickBasucu(0);
   return null;
 }
 boot();
