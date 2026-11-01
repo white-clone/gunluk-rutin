@@ -71,8 +71,10 @@
       <button class="btn primary block" type="submit" data-label="Sıfırlama bağlantısı gönder">Sıfırlama bağlantısı gönder</button>
       <div class="row"><button class="link" type="button" data-view="login">Girişe dön</button></div>
     </form>
+    <p class="hint" id="apkLink" hidden><a href="https://github.com/white-clone/gunluk-rutin/releases/latest/download/gunluk-rutin.apk">Android uygulamasını indir</a> · bildirimler daha düzenli gelir</p>
   </div>
 </main>
+<script>if (!window.Capacitor) document.getElementById('apkLink').hidden = false;</script>
 
 <script>
 (() => {

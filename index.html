@@ -400,7 +400,7 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
 
 /* alt bilgi */
 .foot{display:flex;flex-wrap:wrap;gap:var(--space-4);justify-content:center;font-size:13px;color:var(--ink-muted);padding-top:var(--space-4)}
-.foot button,.foot label{border:0;background:none;padding:0;color:var(--ink-muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.foot button,.foot label,.foot a{border:0;background:none;padding:0;color:var(--ink-muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .sync{text-decoration:none!important}
 .sync.err{color:var(--streak)}
 /* ---- Sonradan eklenenler: temel kurallardan sonra gelsin ki onları geçersiz kılabilsin ---- */
@@ -742,6 +742,7 @@ input,textarea{caret-color:var(--accent)}
   <footer class="foot">
     <span class="sync" id="syncState" role="status"></span>
     <button type="button" data-openfb>Hata bildir ya da öneri yaz</button>
+    <a id="footApk" href="https://github.com/white-clone/gunluk-rutin/releases/latest/download/gunluk-rutin.apk" target="_blank" rel="noopener" data-act="appIndir">Android uygulamasını indir</a>
   </footer>
 </main>
 
@@ -842,6 +843,14 @@ input,textarea{caret-color:var(--accent)}
         <div class="msg" id="pwMsg" role="alert" hidden></div>
         <button class="btn primary" type="submit" id="pwSave">Şifreyi değiştir</button>
       </form>
+    </details>
+    <details class="acc-sec" id="appSec">
+      <summary>ANDROID UYGULAMASI</summary>
+      <div class="acc-form">
+        <p class="hint">Telefona yüklenen uygulamada hatırlatmalar internetsiz ve tam saatinde gelir. Yüklerken telefon "bilinmeyen kaynak" izni isteyebilir; izin verip devam et.</p>
+        <a class="btn primary" id="appIndir" href="https://github.com/white-clone/gunluk-rutin/releases/latest/download/gunluk-rutin.apk" target="_blank" rel="noopener">Uygulamayı indir (APK)</a>
+        <p class="hint" id="appSurum"></p>
+      </div>
     </details>
     <details class="acc-sec" id="basucuSec" hidden>
       <summary>BAŞUCU REHBERİM</summary>
@@ -1458,7 +1467,7 @@ function renderDaily(r, cs) {
   const all = daily(), list = todayList();
   const cur = currentTask(r);
   validTimer(cur);
-  let h = notifBanner() + yesterdayBanner(), quote = '';
+  let h = surumBanner() + appBanner() + notifBanner() + yesterdayBanner(), quote = '';
   if (!all.length) {
     h += `<div class="empty"><h2>Her gün yaptığın işleri ekle</h2><p>Sağ alttaki + düğmesiyle sırayla yapacağın işleri ekle. O günün bütün işlerini bitirdiğin her gün seriye bir çizgi eklenir; bir gün eksik kalırsa seri sıfırlanır.</p><button class="btn secondary" type="button" data-act="samples">Örnek görevlerle dene</button></div>`;
   } else {
@@ -1870,6 +1879,10 @@ function onAction(e) {
     case 'fixY': openYesterday(); return;
     case 'enableNotif': enablePush().catch(err => toast(hataMesaji(err))).finally(updateNotifUi); return;
     case 'notifLater': S.notifLater = shift(today(), 6); break;
+    case 'surumLater': S.surumLater = today(); break;
+    case 'appLater': S.appLater = true; break;
+    case 'surumIndir': track('surum_indir'); return;
+    case 'appIndir': track('uygulama_indir'); return;
     case 'freezeY':
       if (freezesLeft(shift(today(), -1)) > 0) { setFrozen(shift(today(), -1), true); track('izin_gunu'); toast(`Dün izin günü sayıldı. Serin ${currentStreak()} gün.`); }
       break;
@@ -2632,6 +2645,44 @@ function notifBanner() {
   }
   return `<div class="nbar" role="status">${bellIcon}<span>Hatırlatmalar bildirim olarak gelsin mi?</span><button class="link" type="button" data-act="enableNotif">Bildirimleri aç</button>${later}</div>`;
 }
+// ---- Android uygulaması: sürüm uyarısı ve indirme bağlantısı ----
+// Uygulama kendi sürümünü tarayıcı kimliğine ekler (derle.ps1: GunlukRutinApp/N); eki olmayan eski uygulama 1 sayılır.
+// En son sürüm sitedeki surum.json'da (uygulama/yayinla-apk.ps1 yazar).
+const APP_SURUM = NATIVE ? (+((navigator.userAgent.match(/GunlukRutinApp\/(\d+)/) || [])[1]) || 1) : 0;
+const ANDROID_WEB = !NATIVE && /Android/i.test(navigator.userAgent);
+const APK_URL = 'https://github.com/white-clone/gunluk-rutin/releases/latest/download/gunluk-rutin.apk';
+let yeniSurum = null, sonKontrol = 0;
+function surumKontrol() {
+  if (!NATIVE) return;
+  sonKontrol = Date.now();
+  fetch('surum.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => r.json())
+    .then(j => {
+      if (j.surum > APP_SURUM) { yeniSurum = j; appSecGuncelle(); if (loaded) render(); }
+    })
+    .catch(() => {});
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - sonKontrol > 6 * 3600000) surumKontrol();
+});
+const kapatX = (act, label) => `<button class="x" type="button" data-act="${act}" aria-label="${label}" title="${label}"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"/></svg></button>`;
+function surumBanner() {
+  if (!yeniSurum || S.surumLater === today()) return '';
+  return `<div class="nbar" role="status">${bellIcon}<span>Yeni sürüm var (${esc(yeniSurum.ad)})${yeniSurum.not ? ' · ' + esc(yeniSurum.not) : ''}</span><a class="link" href="${esc(yeniSurum.apk || APK_URL)}" target="_blank" rel="noopener" data-act="surumIndir">İndir</a>${kapatX('surumLater', 'Bugün gösterme')}</div>`;
+}
+function appBanner() {
+  if (!ANDROID_WEB || S.appLater) return '';
+  return `<div class="nbar" role="status">${bellIcon}<span>Bildirimler telefonda daha düzenli gelsin: Android uygulamasını indir.</span><a class="link" href="${APK_URL}" target="_blank" rel="noopener" data-act="appIndir">İndir</a>${kapatX('appLater', 'Gösterme')}</div>`;
+}
+// Hesap menüsündeki "Android uygulaması" bölümü: uygulamada sürümü yazar, indirme düğmesi yalnızca yeni sürüm varsa
+function appSecGuncelle() {
+  if (!NATIVE) return;
+  $('footApk').hidden = true;
+  $('appSurum').textContent = `Bu telefondaki sürüm: 1.${APP_SURUM}` + (yeniSurum ? ` · yeni sürüm: ${yeniSurum.ad}` : '');
+  $('appIndir').hidden = !yeniSurum;
+}
+appSecGuncelle();
+surumKontrol();
 $('notifTest').addEventListener('click', async () => {
   try {
     if (LN) { await LN.schedule({ notifications: [{ id: 2, title: 'Günlük Rutin', body: 'Deneme bildirimi: bu telefona bildirim geliyor.', smallIcon: 'ic_stat_rozet', schedule: { at: new Date(Date.now() + 1500), allowWhileIdle: true } }] }); toast('Deneme bildirimi gönderildi.'); return; }
