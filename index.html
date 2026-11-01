@@ -1234,7 +1234,11 @@ const calDel = t => t.assigned || t.ext ? '' : `<button class="x del" type="butt
 const shareBtn = t => t.assigned || t.ext ? '' : `<button class="x share${isShared(t) ? ' on' : ''}" type="button" data-sharetask="${t.id}" aria-label="${esc(t.name)} işini paylaş" title="Paylaş">${shareIcon}</button>`;
 // Ekip görevi: kim verdi, hangi ekipten
 const assignLabel = t => t.assigned ? [t.by ? `${t.by} verdi` : '', t.team].filter(Boolean).join(' · ') : '';
-const timeLabel = t => t.time ? (t.end ? `${t.time}–${t.end}` : t.time) : '';
+// Gece yarısını geçen iş: bitiş başlangıçtan önce (ör. 23.00–01.00)
+const overnight = t => !!(t && t.time && t.end && t.end < t.time);
+const timeLabel = t => t.time ? (t.end ? `${t.time}–${t.end}${overnight(t) ? ' (ertesi gün)' : ''}` : t.time) : '';
+// Bir önceki güne tarihli, gece yarısını geçen tek seferlik işler: bu güne "devam" notu olarak düşer
+const contOn = k => general().filter(g => g.due === shift(k, -1) && overnight(g));
 // Hatırlatma süresi: boş = yok, 0 = tam saatinde (veritabanı 12-hatirlatma-suresi.sql çalıştırılınca açılır)
 let HAS_REMIND = false;
 const REMIND_OPTS = [['', 'Yok'], ['0', 'Tam saatinde'], ['5', '5 dk önce'], ['10', '10 dk önce'], ['15', '15 dk önce'], ['30', '30 dk önce'], ['60', '1 saat önce'], ['1440', '1 gün önce']];
@@ -1411,6 +1415,7 @@ const initials = name => name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).joi
 
 // ---- çizim ----
 function render() {
+  if (LN) yerelPlanla();
   const r = todayRec();
   const cs = currentStreak();
   if (cs > S.best) S.best = cs;
@@ -1468,7 +1473,7 @@ function renderDaily(r, cs) {
         const cls = isDone ? 'done' : isSkip ? 'skip' : isNow ? 'now' : 'next';
         const tt = timeOn(t, today());
         const meta = isDone ? atLabel(r, t.id) || 'bitti' : isSkip ? 'atlandı' : isNow ? [timeLabel(tt), 'şimdi'].filter(Boolean).join(' · ') : [timeLabel(tt), t.dur ? `${t.dur} dk` : ''].filter(Boolean).join(' · ');
-        const late = !isDone && !isSkip && tt.time && (tt.end || tt.time) < nowHM();
+        const late = !isDone && !isSkip && tt.time && !overnight(tt) && (tt.end || tt.time) < nowHM();
         const ts = taskStreak(t.id);
         const exR = excuseReason(r, t.id);
         const sub = [exR ? `<span>${esc(exR)}</span>` : '', t.dur && (isDone || isNow) ? `<span class="ic">${clockIcon}${t.dur} dk</span>` : '', ts > 0 ? `<span class="s">${ts} gün</span>` : '', subIcons(t)].filter(Boolean).join('');
@@ -1889,7 +1894,8 @@ $('view-calendar').addEventListener('toggle', e => { if (e.target.id === 'doneLi
 // Saat aralığı denetimi: bitiş varsa başlangıç da olmalı ve ondan sonra gelmeli
 function rangeError(st, en) {
   if (en && !st) return 'Bitiş saati için başlangıç saatini de yaz.';
-  if (st && en && en <= st) return 'Bitiş saati başlangıçtan sonra olmalı.';
+  // Bitiş başlangıçtan önceyse iş gece yarısını geçer (ör. 23.00–01.00), ertesi gün biter.
+  if (st && en && en === st) return 'Bitiş saati başlangıçla aynı olamaz.';
   return '';
 }
 document.addEventListener('submit', e => {
@@ -2060,7 +2066,7 @@ $('sheetForm').addEventListener('submit', e => {
   const allDay = $('fAllDay').checked;
   const st = allDay ? '' : $('fTime').value, en = allDay ? '' : $('fEnd').value;
   if (en && !st) { toast('Bitiş saati için başlangıç saatini de yaz.'); return; }
-  if (st && en && en <= st) { toast('Bitiş saati başlangıçtan sonra olmalı.'); return; }
+  if (st && en && en === st) { toast('Bitiş saati başlangıçla aynı olamaz.'); return; }
   t.time = st || ''; t.end = st ? (en || '') : '';
   if (HAS_REMIND) t.remind = remindParse($('fRemind').value);
   if (HAS_PRIO && !t.assigned && getPrio('fPrio') !== prioOf(t)) { t.prio = getPrio('fPrio'); track('oncelik_sec'); }
@@ -2127,7 +2133,7 @@ $('addForm').addEventListener('submit', e => {
   const name = $('aName').value.trim();
   if (!name) { toast('İşin adını yaz.'); $('aName').focus(); return; }
   const allDay = $('aAllDay').checked, st = allDay ? '' : $('aTime').value, en = allDay ? '' : $('aEnd').value;
-  const re = rangeError(st, en); if (re) { toast(re); return; }
+  const re = rangeError(st, en); if (re) { toast(re); $(st ? 'aEnd' : 'aTime').focus(); return; }
   const base = { id: addTmp.id, name, time: st, end: st ? en : '', remind: remindParse($('aRemind').value), note: $('aNote').value.trim().slice(0, 500), prio: HAS_PRIO ? getPrio('aPrio') : 1, created: Date.now() };
   const t = addType === 'daily'
     ? Object.assign(base, { type: 'daily', dur: Math.max(0, Math.min(600, parseInt($('aDur').value, 10) || 0)), days: addDays, color: HAS_COLOR ? getColor('aColor') : '' })
@@ -2140,6 +2146,7 @@ $('addForm').addEventListener('submit', e => {
   if (S.tab === 'calendar' && t.due) { calSel = t.due; calMonth = t.due.slice(0, 7); }
   const share = !!$('aShare').querySelector('input:checked');
   $('addSheet').close(); render();
+  if (t.type === 'general' && t.due && overnight(t)) { toast(`"${name}" ${shortDate(t.due)} · ${t.time}–${t.end} (ertesi gün). Ertesi güne de not düştü.`); if (share) applyShares(t.id, $('aShare')); return; }
   toast(t.type === 'daily' ? `"${name}" eklendi · ${daysLabel(t.days).toLocaleLowerCase('tr')}.` : t.due ? `"${name}" ${parseKey(t.due).getDate()} ${MONTHS[parseKey(t.due).getMonth()]} gününe eklendi.` : `"${name}" Liste'ye eklendi.`);
   if (share) applyShares(t.id, $('aShare'));
 });
@@ -2476,6 +2483,16 @@ async function notifUiInner() {
   for (const el of document.querySelectorAll('[data-pref]')) el.checked = PROFILE[el.dataset.pref] !== false;
   for (const el of document.querySelectorAll('[data-pref-time]')) el.value = (PROFILE[el.dataset.prefTime] || '').slice(0, 5);
   const st = $('notifState'), btn = $('notifBtn');
+  if (LN) {
+    const p = await lnCheck(), on = p === 'granted';
+    if (hasSub !== on) { hasSub = on; if (loaded) render(); }
+    st.textContent = on ? 'Bu telefonda bildirimler açık. Hatırlatmalar tam saatinde, internetsiz de gelir.' : p === 'denied'
+      ? 'Bildirim izni kapalı. Telefonun Ayarlar → Uygulamalar → Günlük Rutin → Bildirimler bölümünden aç.' : 'Bu telefona henüz bildirim gelmiyor.';
+    btn.hidden = on || p === 'denied'; $('notifTest').hidden = !on;
+    btn.textContent = 'Bu telefonda bildirimleri aç'; btn.className = 'btn primary';
+    if (on) yerelPlanla();
+    return;
+  }
   if (!pushOk) {
     st.textContent = isIos && !standalone
       ? 'iPhone\'da bildirim almak için önce Safari\'de Paylaş → Ana Ekrana Ekle\'ye bas, sonra uygulamayı ana ekrandaki simgeden aç.'
@@ -2500,8 +2517,94 @@ async function notifUiInner() {
   btn.className = sub ? 'btn secondary' : 'btn primary';
 }
 let hasSub = null, subSaved = false;
+// ---- Android uygulaması: bildirimler telefonun kendisinden ----
+// Uygulama (uygulama/ klasörü, Capacitor) siteyi açar; web bildirimleri (PushManager) orada yok.
+// Bunun yerine hatırlatmalar telefonda önceden planlanır: önümüzdeki 7 gün, iş/profil her değiştiğinde
+// yeniden. Metinler sunucudaki hatirlatma_listesi ile aynı. Tam saatinde ve internetsiz gelir.
+const NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+const LN = NATIVE && window.Capacitor.Plugins ? Capacitor.Plugins.LocalNotifications : null;
+let lnPerm = null, lnSig = '', lnTimer = null;
+async function lnCheck() {
+  if (!LN) return null;
+  try { lnPerm = (await LN.checkPermissions()).display; } catch (e) { lnPerm = null; }
+  return lnPerm;
+}
+const hatirlatmaMetni = (dk, st, en) => (dk === 0 ? 'Planlanan saat geldi' : dk === 1440 ? 'Yarın bu saatte' : dk === 60 ? '1 saat sonra başlıyor' : `${dk} dk sonra başlıyor`) + ` · ${st}${en ? '–' + en : ''}`;
+// Bildirim kimliği: aynı iş ve gün için hep aynı sayı (Android 32 bit tam sayı ister)
+const lnId = s => { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h) || 1; };
+const lnAt = (k, hm, minus = 0) => { const d = parseKey(k); const [h, m] = hm.split(':').map(Number); d.setHours(h, m - minus, 0, 0); return d; };
+function lnList() {
+  if (!PROFILE || !loaded) return [];
+  const out = [], now = Date.now() + 30000, t0 = today();
+  const add = (key, at, title, body) => { if (at.getTime() > now) out.push({ id: lnId(key), title, body, schedule: { at, allowWhileIdle: true }, smallIcon: 'ic_stat_rozet', extra: { key } }); };
+  for (let i = 0; i < 7; i++) {
+    const k = shift(t0, i), rec = S.days[k], frozen = !!(rec && rec.frozen);
+    const doneDaily = id => !!(rec && rec.done.includes(id));
+    const dailies = daily().filter(t => activeOn(t, k) && createdKey(t) <= k);
+    if (PROFILE.remind_tasks !== false) {
+      const items = dailies.filter(t => !frozen && !doneDaily(t.id)).map(t => ({ t, at: timeOn(t, k) }))
+        .concat(general().filter(g => g.due === k && !g.done).map(g => ({ t: g, at: { time: g.time || '', end: g.end || '' } })));
+      for (const { t, at } of items) {
+        if (!at.time) continue;
+        const dk = t.remind;
+        if (dk !== null && dk !== undefined) add(`gorev-${t.id}-${k}`, lnAt(k, at.time, dk), t.name, hatirlatmaMetni(dk, at.time, at.end));
+        if (prioOf(t) === 2 && dk !== 0) add(`onemli-${t.id}-${k}`, lnAt(k, at.time), t.name, 'Önemli · ' + hatirlatmaMetni(0, at.time, at.end));
+      }
+    }
+    if (frozen || !dailies.length) continue;
+    if (PROFILE.remind_morning && PROFILE.morning_time) {
+      const ilk = [...dailies].sort((a, b) => byTime(timeOn(a, k), timeOn(b, k)))[0];
+      add(`sabah-${k}`, lnAt(k, PROFILE.morning_time.slice(0, 5)), 'Günaydın', `Bugün ${dailies.length} işin var. İlki: ${ilk.name}`);
+    }
+    if (PROFILE.remind_evening && PROFILE.evening_time) {
+      const yapilan = dailies.filter(t => doneDaily(t.id)).length, kalan = dailies.length - yapilan, seri = currentStreak();
+      if (kalan > 0) add(`aksam-${k}`, lnAt(k, PROFILE.evening_time.slice(0, 5)), 'Gün bitmeden',
+        seri > 0 ? `${seri} günlük serin tehlikede · ${kalan} iş kaldı` : yapilan === 0 ? `Bugün henüz başlamadın. ${kalan} işin seni bekliyor.` : `${kalan} iş kaldı.`);
+    }
+  }
+  return out.sort((a, b) => a.schedule.at - b.schedule.at).slice(0, 60);
+}
+function yerelPlanla(delay = 1500) {
+  if (!LN) return;
+  clearTimeout(lnTimer);
+  lnTimer = setTimeout(async () => {
+    if (lnPerm !== 'granted' && (await lnCheck()) !== 'granted') return;
+    const list = lnList();
+    const sig = JSON.stringify(list.map(n => [n.id, +n.schedule.at, n.title, n.body]));
+    if (sig === lnSig) return;
+    try {
+      const { notifications } = await LN.getPending();
+      const eski = notifications.filter(n => n.id > 2); // 1 ve 2: açılış/deneme bildirimleri
+      if (eski.length) await LN.cancel({ notifications: eski.map(n => ({ id: n.id })) });
+      if (list.length) await LN.schedule({ notifications: list });
+      lnSig = sig;
+    } catch (e) {}
+  }, delay);
+}
+// İzin ister; Android 12+ "tam saatinde alarm" izni kapalıysa ayarlara yönlendirir
+async function enableNative() {
+  const p = (await LN.requestPermissions()).display;
+  lnPerm = p;
+  if (p !== 'granted') { toast('Bildirim izni verilmedi. Telefonun Ayarlar → Uygulamalar → Günlük Rutin → Bildirimler bölümünden açabilirsin.'); return false; }
+  try {
+    const ex = await LN.checkExactNotificationSetting();
+    if (ex && ex.exact_alarm && ex.exact_alarm !== 'granted') {
+      toast('Hatırlatmalar tam saatinde gelsin diye "Alarm ve hatırlatıcılar" iznini aç.');
+      await LN.changeExactNotificationSetting();
+    }
+  } catch (e) {}
+  lnSig = ''; yerelPlanla(0);
+  await LN.schedule({ notifications: [{ id: 1, title: 'Günlük Rutin', body: 'Bildirimler bu telefonda açıldı.', smallIcon: 'ic_stat_rozet', schedule: { at: new Date(Date.now() + 1500), allowWhileIdle: true } }] });
+  toast('Bildirimler açıldı.'); track('bildirim_ac');
+  return true;
+}
+if (LN) {
+  lnCheck().then(() => { if (loaded) { updateNotifUi(); render(); } });
+  try { LN.addListener('localNotificationReceived', n => { chime(); if (!document.hidden && n.title) toast(`${n.title}${n.body ? ' · ' + n.body : ''}`); }); } catch (e) {}
+}
 // Bildirim izni ister, cihazı abone eder ve aboneliği sunucuya kaydeder
 async function enablePush() {
+  if (LN) return enableNative();
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') { toast(perm === 'denied' ? 'Bildirim izni reddedildi. Tarayıcının site ayarlarından izin verebilirsin.' : 'Bildirim izni verilmedi.'); return false; }
   if (!vapidKey) {
@@ -2521,15 +2624,17 @@ async function enablePush() {
 // Ana ekrandaki "bildirimleri aç" kartı
 function notifBanner() {
   // "Sonra" denince bir hafta gösterilmez; kutu tek satır
-  if (!pushOk || hasSub !== false || (S.notifLater && S.notifLater >= today())) return '';
+  if ((!pushOk && !LN) || hasSub !== false || (S.notifLater && S.notifLater >= today())) return '';
+  if (LN && lnPerm === 'denied') return '';
   const later = `<button class="x" type="button" data-act="notifLater" aria-label="Bir hafta gösterme" title="Bir hafta gösterme"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8"/></svg></button>`;
-  if (Notification.permission === 'denied') {
+  if (!LN && Notification.permission === 'denied') {
     return `<div class="nbar" role="status">${bellIcon}<span>Bildirim izni kapalı. Tarayıcı ayarlarından bu siteye izin verip sayfayı yenile.</span>${later}</div>`;
   }
   return `<div class="nbar" role="status">${bellIcon}<span>Hatırlatmalar bildirim olarak gelsin mi?</span><button class="link" type="button" data-act="enableNotif">Bildirimleri aç</button>${later}</div>`;
 }
 $('notifTest').addEventListener('click', async () => {
   try {
+    if (LN) { await LN.schedule({ notifications: [{ id: 2, title: 'Günlük Rutin', body: 'Deneme bildirimi: bu telefona bildirim geliyor.', smallIcon: 'ic_stat_rozet', schedule: { at: new Date(Date.now() + 1500), allowWhileIdle: true } }] }); toast('Deneme bildirimi gönderildi.'); return; }
     const reg = swReg || await navigator.serviceWorker.ready;
     await reg.showNotification('Günlük Rutin', { body: 'Deneme bildirimi: bu cihaza bildirim geliyor.', icon: 'ikon-192.png', badge: 'ikon-rozet.png', tag: 'deneme' });
     toast('Deneme bildirimi gönderildi.');
@@ -2539,7 +2644,7 @@ $('accNotifBtn').addEventListener('click', () => $('notifBtn').click());
 $('notifBtn').addEventListener('click', async () => {
   const btn = $('notifBtn'); btn.disabled = true;
   try {
-    const sub = await currentSub();
+    const sub = LN ? null : await currentSub();
     if (sub) {
       await sb.rpc('abonelik_sil', { p_endpoint: sub.endpoint });
       await sub.unsubscribe();
@@ -2559,14 +2664,14 @@ document.querySelectorAll('[data-pref-time]').forEach(el => el.addEventListener(
   if (!/^\d{2}:\d{2}$/.test(v)) { el.value = (PROFILE[k] || '').slice(0, 5); return; }
   const { error } = await sb.from('profiles').update({ [k]: v }).eq('id', USER.id);
   if (error) { el.value = (PROFILE[k] || '').slice(0, 5); toast(hataMesaji(error)); return; }
-  PROFILE[k] = v;
+  PROFILE[k] = v; lnSig = ''; yerelPlanla();
   toast(`Hatırlatma saati ${v} oldu.`);
 }));
 document.querySelectorAll('[data-pref]').forEach(el => el.addEventListener('change', async () => {
   const k = el.dataset.pref, on = el.checked;
   const { error } = await sb.from('profiles').update({ [k]: on }).eq('id', USER.id);
   if (error) { el.checked = !on; toast(hataMesaji(error)); return; }
-  PROFILE[k] = on;
+  PROFILE[k] = on; lnSig = ''; yerelPlanla();
 }));
 
 // ---- akış ve tepkiler ----
@@ -3035,7 +3140,7 @@ $('ttForm').addEventListener('submit', async e => {
   e.preventDefault();
   const name = $('ttName').value.trim(); if (!name) { toast('İşin adını yaz.'); $('ttName').focus(); return; }
   const all = $('ttAllDay').checked, st = all ? '' : $('ttTime').value, en = all ? '' : $('ttEnd').value;
-  const re = rangeError(st, en); if (re) { toast(re); return; }
+  const re = rangeError(st, en); if (re) { toast(re); $(st ? 'ttEnd' : 'ttTime').focus(); return; }
   if (st && !$('ttDue').value) { toast('Saat verdiysen tarihini de seç.'); return; }
   $('ttSave').disabled = true;
   const { error } = await sb.rpc('ortak_is_kaydet', { p_id: ttEdit ? ttEdit.id : null, p_team: TEAM.id, p_ad: name, p_tarih: $('ttDue').value || null, p_saat: st || null, p_bitis: st && en ? en : null, p_not: $('ttNote').value.trim() || null, p_hatirlat: st ? remindParse($('ttRemind').value) : 0, ...(HAS_PRIO ? { p_oncelik: getPrio('ttPrio') } : {}) });
@@ -3083,7 +3188,8 @@ function dayItems(k) {
   const ds = daily().filter(x => (activeOn(x, k) && (past ? createdKey(x) <= k : true)) || (rec && rec.done.includes(x.id)))
     .map(x => ({ t: x, done: !!(rec && rec.done.includes(x.id)), at: timeOn(x, k) }));
   const gs = general().filter(g => g.due === k).map(g => ({ t: g, done: !!g.done, due: true, at: timeOn(g, k) }));
-  return ds.concat(gs).sort((a, b) => byTime(a.at, b.at));
+  const cs = contOn(k).map(g => ({ t: g, done: !!g.done, cont: true, at: { time: '00:00', end: g.end } }));
+  return ds.concat(gs, cs).sort((a, b) => byTime(a.at, b.at));
 }
 const monday = k => shift(k, -wdIndex(k));
 const shortDate = k => { const d = parseKey(k); return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}`; };
@@ -3303,12 +3409,12 @@ function weekStart() {
 function weekItems(k) {
   const t = today();
   // Tekrarlı işler istenirse çizelgeden gizlenir (her güne düştükleri için kalabalık yapıyorlar)
-  return dayItems(k).filter(it => !(S.hideRep && it.t.type === 'daily')).map(it => ({ name: it.t.name, time: it.at.time, end: it.at.end, dur: it.t.dur, id: it.t.id, k, drag: it.t.type === 'general' && !it.t.done && k >= t, cls: (dropFlash === it.t.id ? 'settle ' : '') +(k <= t ? (it.done ? 'ok' : k < t ? 'no' : '') : '') + prioCls(it.t) + colCls(it.t), col: colorOf(it.t) }))
+  return dayItems(k).filter(it => !(S.hideRep && it.t.type === 'daily')).map(it => ({ name: it.cont ? `${it.t.name} (devam)` : it.t.name, time: it.at.time, end: it.at.end, dur: it.t.dur, id: it.t.id, k, drag: !it.cont && it.t.type === 'general' && !it.t.done && k >= t, cls: (dropFlash === it.t.id ? 'settle ' : '') +(k <= t ? (it.done ? 'ok' : k < t ? 'no' : '') : '') + prioCls(it.t) + colCls(it.t), col: colorOf(it.t) }))
     .concat(plansOn(k).map(p => ({ name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', end: p.bitis ? p.bitis.slice(0, 5) : '', cls: (p.done ? 'ok' : 'team') + prioCls({ prio: p.priority }), owner: p.kind === 'ortak' ? p.team_name : p.owner_name })));
 }
 // Çakışan bloklar yan yana dizilir
 function layoutBlocks(list) {
-  const items = list.map(x => { const a = toMin(x.time); let b = x.end ? toMin(x.end) : a + Math.max(30, Math.min(x.dur || 60, 240)); return Object.assign({}, x, { a, b: Math.min(Math.max(b, a + 30), 24 * 60) }); }).sort((x, y) => x.a - y.a || y.b - x.b);
+  const items = list.map(x => { const a = toMin(x.time); let b = x.end ? toMin(x.end) : a + Math.max(30, Math.min(x.dur || 60, 240)); if (x.end && b < a) b = 24 * 60; return Object.assign({}, x, { a, b: Math.min(Math.max(b, a + 30), 24 * 60) }); }).sort((x, y) => x.a - y.a || y.b - x.b);
   let group = [], lanes = [], groupEnd = -1;
   // Blok, kendi saatinde sağındaki sütunlar boşsa onları da kaplar (yarım genişlikte kalıp kaymış görünmesin)
   const flush = () => {
@@ -3381,6 +3487,7 @@ function placeWeekScroll(prevTop) {
 // Bilgisayarda ay hücresinde o güne tarihli işler ve paylaşılan planlar yazıyla görünür (tekrarlı işler her güne düştüğü için gösterilmez)
 function monthItems(k) {
   const list = general().filter(g => g.due === k).map(g => ({ name: g.name, time: g.time, cls: (g.done ? 'ok' : '') + prioCls(g) }))
+    .concat(contOn(k).map(g => ({ name: `${g.name} (devam)`, time: '00:00', cls: (g.done ? 'ok' : '') + prioCls(g) })))
     .concat(plansOn(k).filter(p => p.type === 'general').map(p => ({ name: p.name, time: p.saat ? p.saat.slice(0, 5) : '', cls: 'team' + (p.done ? ' ok' : '') })))
     .sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
   if (!list.length) return '';
@@ -3397,7 +3504,7 @@ function monthHtml() {
     const k = `${y}-${pad(m)}-${pad(d)}`, s = calState(k);
     if (k <= t && (s === 'full' || s === 'part' || s === 'miss')) { counted++; if (s === 'full') full++; }
     if (s === 'frozen') frozen++;
-    const due = general().some(g => g.due === k && !g.done), plan = plansOn(k).some(p => p.type === 'general' && !p.done); // tekrarlı ekip planları her güne nokta koymasın
+    const due = general().some(g => g.due === k && !g.done) || contOn(k).some(g => !g.done), plan = plansOn(k).some(p => p.type === 'general' && !p.done); // tekrarlı ekip planları her güne nokta koymasın
     cells += `<button type="button" class="cd ${s}${k === t ? ' today' : ''}${k === calSel ? ' sel' : ''}" data-cal="${k}" aria-pressed="${k === calSel}" aria-label="${d} ${MONTHS[m - 1]}${CAL_NAMES[s] ? ': ' + CAL_NAMES[s] : ''}${due ? ', son tarihli iş var' : ''}${plan ? ', ekip planı var' : ''}">${isDesk() ? `<span class="cd-n">${d}</span>${monthItems(k)}` : d}<span class="dots">${due ? '<i class="dot"></i>' : ''}${plan ? '<i class="dot team"></i>' : ''}</span></button>`;
   }
   const stats = counted ? `Bu ay ${full}/${counted} gün tamam${frozen ? ` · ${frozen} izin günü` : ''}` : 'Bu ay henüz sayılan gün yok';
@@ -3428,13 +3535,18 @@ function calDayHtml(k) {
     h += `<p class="sec">SON TARİHLİ</p><ul class="list">` + dueTasks.map(g =>
       `<li class="crow${prioCls(g)}">${`<button class="mk${g.done ? ' ok' : ' plan'}" type="button" data-act="gtoggle" data-id="${g.id}" aria-label="${esc(g.name)}: ${g.done ? 'geri al' : 'tamamlandı olarak işaretle'}">${g.done ? check : ''}</button>`}<button class="fn cal-open" type="button" data-caledit="${g.id}" aria-label="${esc(g.name)} işini düzenle"><span class="t">${esc(g.name)}</span>${subIcons(g) ? `<span class="sub">${subIcons(g)}</span>` : ''}</button><span class="crow-r"><span class="meta">${g.done ? 'bitti' : timeLabel(g) || 'tüm gün'}</span>${shareBtn(g)}${calDel(g)}</span></li>`).join('') + `</ul>`;
   }
+  const conts = contOn(k);
+  if (conts.length) {
+    h += `<p class="sec">ÖNCEKİ GÜNDEN DEVAM</p><ul class="list">` + conts.map(g =>
+      `<li class="crow${prioCls(g)}"><span class="mk${g.done ? ' ok' : ' plan'}">${g.done ? check : ''}</span><button class="fn cal-open" type="button" data-caledit="${g.id}" aria-label="${esc(g.name)} işini düzenle"><span class="t">${esc(g.name)}</span><span class="sub"><span>Başlangıç: ${esc(dayName(g.due))} · ${g.time}</span></span></button><span class="crow-r"><span class="meta">${g.done ? 'bitti' : `00:00–${g.end}`}</span></span></li>`).join('') + `</ul>`;
+  }
   const plans = plansOn(k);
   if (plans.length) {
     h += `<p class="sec">PAYLAŞILAN PLANLAR</p><ul class="list">` + plans.map(p => p.kind === 'ortak'
       ? `<li class="crow${prioCls({ prio: p.priority })}"><button class="mk${p.done ? ' ok' : ' team'}" type="button" data-ttcal="${p.task_id}" aria-label="${esc(p.name)}: ${p.done ? 'geri al' : 'bitti olarak işaretle'}">${p.done ? check : ''}</button><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${prioIcon(p.priority)}${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : ' · tüm gün'}</span></span><span class="meta">${p.done ? 'bitti' : ''}</span></li>`
       : `<li class="crow${prioCls({ prio: p.priority })}"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${prioIcon(p.priority)}${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col">${HAS_REMIND && p.saat && PLAN_REM.has(p.task_id) ? `<select class="plan-rem" data-planrem="${p.task_id}" aria-label="${esc(p.name)} için hatırlatma">${remindOptions(PLAN_REM.get(p.task_id))}</select>` : ''}<button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && canAssign((TEAMS || []).find(x => x.id === p.team_id)) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
   }
-  if (!dailyTasks.length && !dueTasks.length && !plans.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
+  if (!dailyTasks.length && !dueTasks.length && !conts.length && !plans.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
   if (k === shift(t, -1) && s !== 'full' && s !== 'rest' && s !== 'none') h += `<button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`;
   if (k >= t) h += `<button class="btn secondary sm" type="button" data-addday="${k}">+ Bu güne iş ekle</button>`;
   return h + `</div>`;
@@ -3775,6 +3887,12 @@ $('importFile').addEventListener('change', async e => {
 let toastT;
 function toast(msg) {
   const el = $('toast'); el.textContent = msg; el.hidden = false;
+  // Açık bir pencere (dialog) varsa mesaj onun içinde gösterilir; yoksa
+  // pencerenin arkasında kalıyor, "Ekle"ye basınca hiçbir şey olmuyor gibi
+  // görünüyordu (ör. bitiş saati başlangıçtan önce).
+  const dlg = [...document.querySelectorAll('dialog[open]')].pop();
+  const host = dlg || document.body;
+  if (el.parentElement !== host) host.appendChild(el);
   clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2600);
 }
 
