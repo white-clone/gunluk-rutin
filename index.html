@@ -2464,7 +2464,19 @@ const pushOk = 'serviceWorker' in navigator && 'PushManager' in window && 'Notif
 const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 let swReg = null, vapidKey = null;
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(r => { swReg = r; updateNotifUi(); }).catch(() => {});
+// Uygulama içinde servis çalışanı sayfayı kendisi getirirse Capacitor köprüsü eklenemiyor; bu yüzden orada kapatılır
+const IN_APP = /GunlukRutinApp\/|; wv\)/.test(navigator.userAgent);
+if (!IN_APP) {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(r => { swReg = r; updateNotifUi(); }).catch(() => {});
+} else {
+  const clearSw = () => 'serviceWorker' in navigator ? navigator.serviceWorker.getRegistrations().then(regs => Promise.all(regs.map(r => r.unregister()))).catch(() => {}) : Promise.resolve();
+  const clearCache = () => window.caches ? caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {}) : Promise.resolve();
+  Promise.all([clearSw(), clearCache()]).then(() => {
+    try {
+      if (!window.Capacitor && !sessionStorage.getItem('swTemizlendi')) { sessionStorage.setItem('swTemizlendi', '1'); location.reload(); }
+    } catch (e) {}
+  }).catch(() => {});
+}
 // Uygulama açıkken bildirim gelirse kısa bir çan sesi çalar; bildirim yine sistemin köşesinde de görünür
 function chime() {
   try {
@@ -2535,7 +2547,7 @@ let hasSub = null, subSaved = false;
 // Bunun yerine hatırlatmalar telefonda önceden planlanır: önümüzdeki 7 gün, iş/profil her değiştiğinde
 // yeniden. Metinler sunucudaki hatirlatma_listesi ile aynı. Tam saatinde ve internetsiz gelir.
 const NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
-const LN = NATIVE && window.Capacitor.Plugins ? Capacitor.Plugins.LocalNotifications : null;
+const LN = (() => { try { if (!NATIVE) return null; return Capacitor.Plugins?.LocalNotifications || (typeof Capacitor.registerPlugin === 'function' ? Capacitor.registerPlugin('LocalNotifications') : null); } catch (e) { return null; } })();
 let lnPerm = null, lnSig = '', lnTimer = null;
 async function lnCheck() {
   if (!LN) return null;
@@ -2549,7 +2561,9 @@ const lnAt = (k, hm, minus = 0) => { const d = parseKey(k); const [h, m] = hm.sp
 function lnList() {
   if (!PROFILE || !loaded) return [];
   const out = [], now = Date.now() + 30000, t0 = today();
-  const add = (key, at, title, body) => { if (at.getTime() > now) out.push({ id: lnId(key), title, body, schedule: { at, allowWhileIdle: true }, smallIcon: 'ic_stat_rozet', extra: { key } }); };
+  const add = (key, at, title, body, kanal) => {
+    if (at.getTime() > now) out.push({ id: lnId(key), title, body, channelId: kanal || (key.startsWith('onemli-') ? 'onemli_v1' : key.startsWith('gorev-') ? 'hatirlatma_v1' : 'genel_v1'), schedule: { at, allowWhileIdle: true }, smallIcon: 'ic_stat_rozet', extra: { key } });
+  };
   for (let i = 0; i < 7; i++) {
     const k = shift(t0, i), rec = S.days[k], frozen = !!(rec && rec.frozen);
     const doneDaily = id => !!(rec && rec.done.includes(id));
@@ -2560,8 +2574,8 @@ function lnList() {
       for (const { t, at } of items) {
         if (!at.time) continue;
         const dk = t.remind;
-        if (dk !== null && dk !== undefined) add(`gorev-${t.id}-${k}`, lnAt(k, at.time, dk), t.name, hatirlatmaMetni(dk, at.time, at.end));
-        if (prioOf(t) === 2 && dk !== 0) add(`onemli-${t.id}-${k}`, lnAt(k, at.time), t.name, 'Önemli · ' + hatirlatmaMetni(0, at.time, at.end));
+        if (dk !== null && dk !== undefined) add(`gorev-${t.id}-${k}`, lnAt(k, at.time, dk), t.name, hatirlatmaMetni(dk, at.time, at.end), prioOf(t) === 2 ? 'onemli_v1' : undefined);
+        if (prioOf(t) === 2 && dk !== 0) add(`onemli-${t.id}-${k}`, lnAt(k, at.time), t.name, 'Önemli · ' + hatirlatmaMetni(0, at.time, at.end), 'onemli_v1');
       }
     }
     if (frozen || !dailies.length) continue;
@@ -2607,13 +2621,24 @@ async function enableNative() {
     }
   } catch (e) {}
   lnSig = ''; yerelPlanla(0);
-  await LN.schedule({ notifications: [{ id: 1, title: 'Günlük Rutin', body: 'Bildirimler bu telefonda açıldı.', smallIcon: 'ic_stat_rozet', schedule: { at: new Date(Date.now() + 1500), allowWhileIdle: true } }] });
+  await LN.schedule({ notifications: [{ id: 1, title: 'Günlük Rutin', body: 'Bildirimler bu telefonda açıldı.', smallIcon: 'ic_stat_rozet', channelId: 'genel_v1', schedule: { at: new Date(Date.now() + 1500), allowWhileIdle: true } }] });
   toast('Bildirimler açıldı.'); track('bildirim_ac');
   return true;
 }
 if (LN) {
-  lnCheck().then(() => { if (loaded) { updateNotifUi(); render(); } });
-  try { LN.addListener('localNotificationReceived', n => { chime(); if (!document.hidden && n.title) toast(`${n.title}${n.body ? ' · ' + n.body : ''}`); }); } catch (e) {}
+  lnCheck().then(p => {
+    if (loaded) { updateNotifUi(); render(); }
+    if (p === 'prompt' || p === 'prompt-with-rationale') {
+      try {
+        const gun = new Date().toDateString();
+        if (localStorage.getItem('lnSoruldu') !== gun) {
+          localStorage.setItem('lnSoruldu', gun);
+          enableNative().then(() => { if (loaded) { updateNotifUi(); render(); } }).catch(() => {});
+        }
+      } catch (e) {}
+    }
+  });
+  try { LN.addListener('localNotificationReceived', n => { if (!document.hidden && n.title) toast(`${n.title}${n.body ? ' · ' + n.body : ''}`); }); } catch (e) {}
 }
 // Bildirim izni ister, cihazı abone eder ve aboneliği sunucuya kaydeder
 async function enablePush() {

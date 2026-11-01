@@ -1,6 +1,6 @@
 {
-    "surum":  2,
-    "ad":  "1.2",
+    "surum":  3,
+    "ad":  "1.3",
     "apk":  "https://github.com/white-clone/gunluk-rutin/releases/latest/download/gunluk-rutin.apk",
-    "not":  "Yeni sürüm uyarısı ve indirme bağlantısı"
+    "not":  "Bildirim izni, önem durumuna göre ses ve titreşim, yeni logo"
 }
