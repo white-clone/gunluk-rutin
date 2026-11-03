@@ -519,6 +519,9 @@ dialog[open] .sheet{animation:up .24s cubic-bezier(.2,.8,.2,1)}
 .tg-col{background:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px calc(var(--hh) / 2),color-mix(in srgb,var(--line) 40%,transparent) calc(var(--hh) / 2) calc(var(--hh) / 2 + 1px),transparent calc(var(--hh) / 2 + 1px) var(--hh))}
 .tg-b{overflow:clip;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch}
 .tg-bl{position:sticky;top:2px;display:block}
+.tg-b.narrow{padding:2px 0;align-items:center}
+.tg-b.narrow .tg-bl{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+.tg-over{position:absolute;z-index:2;min-width:22px;min-height:22px;border-radius:11px;background:var(--raised);border:1px solid var(--line);font:600 11px/20px var(--font-sans);color:var(--ink);padding:0 6px;text-align:center;cursor:pointer}
 /* Kaydırma çubukları temaya uygun ve ince */
 *{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 ::-webkit-scrollbar{width:8px;height:8px}
@@ -3492,10 +3495,22 @@ function weekItems(k) {
 function layoutBlocks(list) {
   const items = list.map(x => { const a = toMin(x.time); let b = x.end ? toMin(x.end) : a + Math.max(30, Math.min(x.dur || 60, 240)); if (x.end && b < a) b = 24 * 60; return Object.assign({}, x, { a, b: Math.min(Math.max(b, a + 30), 24 * 60) }); }).sort((x, y) => x.a - y.a || y.b - x.b);
   let group = [], lanes = [], groupEnd = -1;
+  const overs = [], maxLanes = isDesk() ? 3 : 2;
+  const long = g => g.b - g.a >= 240, hit = (g, o) => o !== g && o.a < g.b && o.b > g.a;
+  // Uzun (4 saat+) bir iş kısa işlerle çakışıyorsa solda ince şerit olur; yan yana en fazla 3 (telefonda 2) iş sığar, fazlası "+N" ile gösterilir.
   // Blok, kendi saatinde sağındaki sütunlar boşsa onları da kaplar (yarım genişlikte kalıp kaymış görünmesin)
   const flush = () => {
-    const n = lanes.length;
-    group.forEach(g => { let s = 1; while (g.lane + s < n && !group.some(o => o.lane === g.lane + s && o.a < g.b && o.b > g.a)) s++; g.n = n; g.span = s; });
+    group.forEach(g => { g.narrow = long(g) && group.some(o => !long(o) && hit(g, o)); });
+    const thin = group.filter(g => g.narrow), wide = group.filter(g => !g.narrow), off = thin.length * 22, used = [];
+    thin.forEach((g, i) => { g.lane = i; g.off = 0; });
+    wide.forEach(g => {
+      let lane = used.findIndex(e => e <= g.a);
+      if (lane < 0) { lane = used.length; used.push(0); }
+      used[lane] = g.b; g.lane = lane;
+    });
+    const n = Math.max(1, Math.min(used.length, maxLanes)), hidden = wide.filter(g => g.lane >= n);
+    wide.forEach(g => { g.hidden = g.lane >= n; g.off = off; let s = 1; while (g.lane + s < n && !wide.some(o => o.lane === g.lane + s && hit(g, o))) s++; g.n = n; g.span = s; });
+    if (hidden.length) overs.push({ a: Math.min(...hidden.map(g => g.a)), count: hidden.length });
     group = []; lanes = [];
   };
   for (const it of items) {
@@ -3505,7 +3520,7 @@ function layoutBlocks(list) {
     lanes[lane] = it.b; it.lane = lane; group.push(it); groupEnd = Math.max(groupEnd, it.b);
   }
   flush();
-  return items;
+  return { items, overs };
 }
 let tgWeek = '', tgScroll = 0;
 function weekHtml() {
@@ -3530,7 +3545,10 @@ function weekHtml() {
     all += `<div class="tg-ac" data-tgday="${d.k}">` + d.allDay.slice(0, 3).map(x => `<button type="button" class="tg-chip ${x.cls}" ${btnAttrs(x, d.k)}${x.col ? ` style="--c:${x.col}"` : ''} title="${label(x)}">${/\bhi\b/.test(x.cls) ? flagMini : ''}${esc(x.name)}</button>`).join('')
       + (d.allDay.length > 3 ? `<button type="button" class="tg-more" data-cal="${d.k}">+${d.allDay.length - 3}</button>` : '') + `</div>`;
     cols += `<div class="tg-col${d.k === t ? ' today' : ''}" data-tgslot="${d.k}" style="height:${H}px">`
-      + d.timed.map(b => `<button type="button" class="tg-b ${b.cls}" ${btnAttrs(b, d.k)} style="${b.col ? `--c:${b.col};` : ''}top:${y(b.a)}px;height:${(Math.max(b.b - b.a, 30) / 60 * HH - 2).toFixed(1)}px;left:calc(${(b.lane / b.n * 100).toFixed(2)}% + 1px);width:calc(${(100 * (b.span || 1) / b.n).toFixed(2)}% - 2px)" title="${label(b)} · ${fromMin(b.a)}–${fromMin(b.b)}" aria-label="${label(b)}, ${fromMin(b.a)}–${fromMin(b.b)}"><span class="tg-bl"><span>${/\bhi\b/.test(b.cls) ? flagMini : ''}${esc(b.name)}</span>${b.b - b.a >= 45 ? `<small>${fromMin(b.a)}–${fromMin(b.b)}</small>` : ''}</span></button>`).join('')
+      + d.timed.items.filter(b => !b.hidden).map(b => b.narrow
+        ? `<button type="button" class="tg-b narrow ${b.cls}" ${btnAttrs(b, d.k)} style="${b.col ? `--c:${b.col};` : ''}top:${y(b.a)}px;height:${(Math.max(b.b - b.a, 30) / 60 * HH - 2).toFixed(1)}px;left:${b.lane * 22 + 1}px;width:20px" title="${label(b)} · ${fromMin(b.a)}–${fromMin(b.b)}" aria-label="${label(b)}, ${fromMin(b.a)}–${fromMin(b.b)}"><span class="tg-bl"><span>${esc(b.name)}</span></span></button>`
+        : `<button type="button" class="tg-b ${b.cls}" ${btnAttrs(b, d.k)} style="${b.col ? `--c:${b.col};` : ''}top:${y(b.a)}px;height:${(Math.max(b.b - b.a, 30) / 60 * HH - 2).toFixed(1)}px;left:calc(${b.off}px + (100% - ${b.off}px) * ${(b.lane / b.n).toFixed(4)} + 1px);width:calc((100% - ${b.off}px) * ${((b.span || 1) / b.n).toFixed(4)} - 2px)" title="${label(b)} · ${fromMin(b.a)}–${fromMin(b.b)}" aria-label="${label(b)}, ${fromMin(b.a)}–${fromMin(b.b)}"><span class="tg-bl"><span>${/\bhi\b/.test(b.cls) ? flagMini : ''}${esc(b.name)}</span>${b.b - b.a >= 45 ? `<small>${fromMin(b.a)}–${fromMin(b.b)}</small>` : ''}</span></button>`).join('')
+      + d.timed.overs.map(o => `<button type="button" class="tg-over" data-cal="${d.k}" aria-label="${o.count} iş daha, günü aç" style="top:${y(o.a)}px;right:2px">+${o.count}</button>`).join('')
       + (d.k === t ? `<span class="tg-now" style="top:${y(toMin(nowHM()))}px"></span>` : '') + `</div>`;
   }
   // Gün bölümleri: hafif zemin rengi ve kalın çizgiyle ayrılır, adları saat sütununda yazar
@@ -3545,7 +3563,7 @@ function weekHtml() {
   return `<div class="cal-head"><button class="icon-btn" type="button" data-wknav="-${span}" aria-label="Önceki ${span} gün">‹</button>`
     + `<div class="cal-title"><b>${shortDate(start)} – ${shortDate(shift(start, span - 1))}</b><span class="st-sub">${stats}</span></div>`
     + `<button class="icon-btn" type="button" data-wknav="${span}" aria-label="Sonraki ${span} gün">›</button></div>`
-    + `<div class="tg-tools"><button class="tg-toggle" type="button" data-hiderep aria-pressed="${!S.hideRep}">Tekrarlı işler</button>${!inView ? `<button class="link" type="button" data-wknav="0">${span === 7 ? 'Bu haftaya dön' : 'Bugüne dön'}</button>` : ''}<span class="grow"></span>${printBtn()}</div>`
+    + `<div class="tg-tools"><button class="tg-toggle" type="button" data-hiderep aria-pressed="${!S.hideRep}">Tekrarlı işler</button>${PLANS.length ? `<button class="tg-toggle" type="button" data-hideplans aria-pressed="${!S.hidePlans}">Paylaşılanlar</button>` : ''}${!inView ? `<button class="link" type="button" data-wknav="0">${span === 7 ? 'Bu haftaya dön' : 'Bugüne dön'}</button>` : ''}<span class="grow"></span>${printBtn()}</div>`
     + `<div class="tg${span === 3 ? ' d3' : ''}" data-h0="${h0}" data-start="${start}" data-span="${span}" style="--hh:${HH}px"><div class="tg-row tg-head">${head}</div><div class="tg-row tg-all">${all}</div>`
     + `<div class="tg-body" id="tgBody"><div class="tg-row">${bands}<div class="tg-hours" style="height:${H}px">${hours}${bandLabels}</div>${cols}</div></div></div>`
     + `<p class="hint">${isDesk() ? 'Boş bir saate tıklayarak iş ekleyebilir, soldaki işleri tutup bir güne ya da saate bırakabilirsin.' : 'Boş bir saate dokunarak o güne iş ekleyebilirsin.'}</p>`;
@@ -3616,12 +3634,13 @@ function calDayHtml(k) {
     h += `<p class="sec">ÖNCEKİ GÜNDEN DEVAM</p><ul class="list">` + conts.map(g =>
       `<li class="crow${prioCls(g)}"><span class="mk${g.done ? ' ok' : ' plan'}">${g.done ? check : ''}</span><button class="fn cal-open" type="button" data-caledit="${g.id}" aria-label="${esc(g.name)} işini düzenle"><span class="t">${esc(g.name)}</span><span class="sub"><span>Başlangıç: ${esc(dayName(g.due))} · ${g.time}</span></span></button><span class="crow-r"><span class="meta">${g.done ? 'bitti' : `00:00–${g.end}`}</span></span></li>`).join('') + `</ul>`;
   }
-  const plans = plansOn(k);
+  const plans = plansOn(k), gizli = plansAllOn(k).length - plans.length;
   if (plans.length) {
     h += `<p class="sec">PAYLAŞILAN PLANLAR</p><ul class="list">` + plans.map(p => p.kind === 'ortak'
-      ? `<li class="crow${prioCls({ prio: p.priority })}"><button class="mk${p.done ? ' ok' : ' team'}" type="button" data-ttcal="${p.task_id}" aria-label="${esc(p.name)}: ${p.done ? 'geri al' : 'bitti olarak işaretle'}">${p.done ? check : ''}</button><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${prioIcon(p.priority)}${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : ' · tüm gün'}</span></span><span class="meta">${p.done ? 'bitti' : ''}</span></li>`
-      : `<li class="crow${prioCls({ prio: p.priority })}"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${prioIcon(p.priority)}${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col">${HAS_REMIND && p.saat && PLAN_REM.has(p.task_id) ? `<select class="plan-rem" data-planrem="${p.task_id}" aria-label="${esc(p.name)} için hatırlatma">${remindOptions(PLAN_REM.get(p.task_id))}</select>` : ''}<button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && canAssign((TEAMS || []).find(x => x.id === p.team_id)) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}</span></li>`).join('') + `</ul>`;
+      ? `<li class="crow${prioCls({ prio: p.priority })}"><button class="mk${p.done ? ' ok' : ' team'}" type="button" data-ttcal="${p.task_id}" aria-label="${esc(p.name)}: ${p.done ? 'geri al' : 'bitti olarak işaretle'}">${p.done ? check : ''}</button><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${prioIcon(p.priority)}${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : ' · tüm gün'}</span></span><span class="meta">${p.done ? 'bitti ' : ''}<button class="btn ghost sm" type="button" data-hideplan="${p.kind}:${p.task_id}">Takvimimden kaldır</button></span></li>`
+      : `<li class="crow${prioCls({ prio: p.priority })}"><span class="mk team"></span><span class="fn"><span class="t">${esc(p.name)}</span><span class="sub">${prioIcon(p.priority)}${esc(planFrom(p))}${planTime(p) ? ' · ' + planTime(p) : p.type === 'general' ? ' · tüm gün' : ''}</span></span><span class="fbtns col">${HAS_REMIND && p.saat && PLAN_REM.has(p.task_id) ? `<select class="plan-rem" data-planrem="${p.task_id}" aria-label="${esc(p.name)} için hatırlatma">${remindOptions(PLAN_REM.get(p.task_id))}</select>` : ''}<button class="btn ghost sm" type="button" data-copyplan="${p.task_id}">Listeme ekle</button>${p.team_id && canAssign((TEAMS || []).find(x => x.id === p.team_id)) ? `<button class="btn ghost sm" type="button" data-giveplan="${p.task_id}">Görev ver</button>` : ''}<button class="btn ghost sm" type="button" data-hideplan="${p.kind}:${p.task_id}">Takvimimden kaldır</button></span></li>`).join('') + `</ul>`;
   }
+  if (gizli) h += `<p class="hint">${gizli} paylaşılan plan gizli · <button class="link" type="button" data-showplans="${k}">Göster</button></p>`;
   if (!dailyTasks.length && !dueTasks.length && !conts.length && !plans.length) h += `<p class="hint">${past ? 'Bu gün için kayıtlı iş yok.' : 'Bu güne planlı iş yok.'}</p>`;
   if (k === shift(t, -1) && s !== 'full' && s !== 'rest' && s !== 'none') h += `<button class="btn secondary sm" type="button" data-act="fixY">Dünü düzelt</button>`;
   if (k >= t) h += `<button class="btn secondary sm" type="button" data-addday="${k}">+ Bu güne iş ekle</button>`;
@@ -3646,6 +3665,12 @@ $('view-calendar').addEventListener('click', e => {
   if (e.target.closest('[data-prdone]')) { S.prNoDone = !S.prNoDone; track('pdf_bitenler'); render(); return; }
   const hr = e.target.closest('[data-hiderep]');
   if (hr) { S.hideRep = !S.hideRep; track('tekrarli_gizle'); render(); return; }
+  const hp = e.target.closest('[data-hideplans]');
+  if (hp) { S.hidePlans = !S.hidePlans; track('paylasilan_gizle'); save(); render(); return; }
+  const hpi = e.target.closest('[data-hideplan]');
+  if (hpi) { S.gizliPlan = (S.gizliPlan || []).concat(hpi.dataset.hideplan); save(); render(); toast('Takviminden kaldırıldı. Paylaşan kişide durmaya devam eder.'); return; }
+  const shp = e.target.closest('[data-showplans]');
+  if (shp) { const geri = plansAllOn(shp.dataset.showplans).map(p => p.kind + ':' + p.task_id); S.hidePlans = false; S.gizliPlan = (S.gizliPlan || []).filter(x => !geri.includes(x)); save(); render(); return; }
   const wn = e.target.closest('[data-wknav]');
   if (wn) { const step = +wn.dataset.wknav; calSel = step ? shift(calSel, step) : today(); calMonth = calSel.slice(0, 7); renderCalendar(); return; }
   const ad = e.target.closest('[data-addday]');
@@ -3709,9 +3734,12 @@ async function loadShares() {
   if (TEAMS === null && team.length) loadTeams();
   if (loaded) render();
 }
-// O güne düşen, başkalarının paylaştığı planlar
-function plansOn(k) {
+// O güne düşen, başkalarının paylaştığı planlar (kişinin takviminden kaldırdıkları hariç)
+function plansAllOn(k) {
   return PLANS.filter(p => !p.benim && (p.type === 'general' ? p.due === k : k >= today() && ((p.days || 127) & (1 << wdIndex(k)))));
+}
+function plansOn(k) {
+  return S.hidePlans ? [] : plansAllOn(k).filter(p => !(S.gizliPlan || []).includes(p.kind + ':' + p.task_id));
 }
 const planTime = p => p.saat ? p.saat.slice(0, 5) + (p.bitis ? '–' + p.bitis.slice(0, 5) : '') : '';
 const planFrom = p => p.kind === 'friend' ? `${p.owner_name} seninle paylaştı` : p.kind === 'ortak' ? `${p.team_name} · ortak iş` : `${p.owner_name} · ${p.team_name}`;
@@ -4081,7 +4109,7 @@ async function reloadFromServer(first) {
   PROFILE = p.data;
   if (HAS_FEED) Object.assign(PROFILE, v3.data);
   fillAccount();
-  const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed, notifLater: S.notifLater, hideRep: S.hideRep, prNoDone: S.prNoDone };
+  const ui = { theme: S.theme, tab: S.tab, ftab: S.ftab, timer: S.timer, dismissed: S.dismissed, notifLater: S.notifLater, hideRep: S.hideRep, prNoDone: S.prNoDone, gizliPlan: S.gizliPlan, hidePlans: S.hidePlans };
   S = Object.assign(blank(), ui);
   S.tasks = t.data.map(r => ({ id: r.id, name: r.name, type: r.type, dur: r.dur, days: r.days || 127, time: r.time ? r.time.slice(0, 5) : '', end: r.end_time ? r.end_time.slice(0, 5) : '', pokeable: !!r.pokeable, due: r.due || '', done: r.done, doneAt: r.done_at ? Date.parse(r.done_at) : 0, created: Date.parse(r.created_at), team: r.team_id ? ((r.teams && r.teams.name) || 'Ekip') : '', assigned: !!r.assigned_by, by: '', note: r.note || '', assignNote: r.assign_note || '', remind: r.remind_before === undefined ? 0 : r.remind_before, prio: r.priority === undefined ? 1 : r.priority, color: r.color || '', moves: Array.isArray(r.moves) ? r.moves : [], ext: r.ext_source === 'basucu', extLocked: !!r.ext_locked }));
   for (const x of (v.error ? [] : v.data || [])) { const k = S.tasks.find(y => y.id === x.task_id); if (k) { k.by = x.veren || ''; if (x.ekip) k.team = x.ekip; } }
